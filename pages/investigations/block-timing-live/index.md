@@ -59,9 +59,3 @@ LIMIT 24
     title="Avg Block Size"
     fmt="num0"
 />
-
----
-
-<Alert status="warning">
-Data refreshed daily at 6:00 UTC. Last build: {new Date().toISOString()}
-</Alert>

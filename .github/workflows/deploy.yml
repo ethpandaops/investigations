@@ -24,17 +24,29 @@ jobs:
 
       - run: npm ci
 
+      - name: Configure ClickHouse Sources
+        run: |
+          mkdir -p sources/xatu sources/xatu_cbt
+          cat > sources/xatu/connection.yaml << 'EOF'
+          name: xatu
+          type: clickhouse
+          options:
+            url: ${{ secrets.XATU_URL }}
+            username: ${{ secrets.XATU_USERNAME }}
+            password: ${{ secrets.XATU_PASSWORD }}
+          EOF
+          cat > sources/xatu_cbt/connection.yaml << 'EOF'
+          name: xatu_cbt
+          type: clickhouse
+          options:
+            url: ${{ secrets.XATU_CBT_URL }}
+            username: ${{ secrets.XATU_CBT_USERNAME }}
+            password: ${{ secrets.XATU_CBT_PASSWORD }}
+          EOF
+
       - name: Build Evidence Site
         env:
           BASE_PATH: /notebooks
-          EVIDENCE_SOURCE__xatu__host: ${{ secrets.XATU_HOST }}
-          EVIDENCE_SOURCE__xatu__port: ${{ secrets.XATU_PORT }}
-          EVIDENCE_SOURCE__xatu__user: ${{ secrets.XATU_USER }}
-          EVIDENCE_SOURCE__xatu__password: ${{ secrets.XATU_PASSWORD }}
-          EVIDENCE_SOURCE__xatu_cbt__host: ${{ secrets.XATU_CBT_HOST }}
-          EVIDENCE_SOURCE__xatu_cbt__port: ${{ secrets.XATU_CBT_PORT }}
-          EVIDENCE_SOURCE__xatu_cbt__user: ${{ secrets.XATU_CBT_USER }}
-          EVIDENCE_SOURCE__xatu_cbt__password: ${{ secrets.XATU_CBT_PASSWORD }}
         run: |
           npm run sources
           npm run build

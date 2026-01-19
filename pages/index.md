@@ -3,8 +3,6 @@ title: ethPandaOps Notebooks
 sidebar_position: 0
 ---
 
-# Ethereum Blockchain Analysis
-
 Welcome to the ethPandaOps notebooks. Data-driven analyses of the Ethereum blockchain using data collected by [Xatu](https://github.com/ethpandaops/xatu).
 
 ## Dashboards
