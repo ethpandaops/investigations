@@ -7,7 +7,7 @@
 
 <EvidenceDefaultLayout
 	{data}
-	logo="/notebooks/logo.png"
+	title="ethPandaOps"
 	builtWithEvidence={false}
 >
 	<slot slot="content" />

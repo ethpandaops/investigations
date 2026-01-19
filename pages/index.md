@@ -5,7 +5,17 @@ sidebar_position: 0
 
 # Ethereum Blockchain Analysis
 
-Welcome to the ethPandaOps investigation notebooks. These are data-driven analyses of the Ethereum blockchain using data collected by [Xatu](https://github.com/ethpandaops/xatu).
+Welcome to the ethPandaOps notebooks. Data-driven analyses of the Ethereum blockchain using data collected by [Xatu](https://github.com/ethpandaops/xatu).
+
+## Dashboards
+
+High-level overview dashboards for monitoring network health and performance.
+
+**[View Dashboards](/notebooks/dashboards)**
+
+## Investigations
+
+Deep-dive analyses into specific aspects of the Ethereum network.
 
 <Alert status="info">
 
@@ -15,7 +25,7 @@ Welcome to the ethPandaOps investigation notebooks. These are data-driven analys
 
 </Alert>
 
-Browse investigations using the **sidebar navigation** on the left, or jump directly to **[View All Investigations](/notebooks/investigations)**.
+**[View Investigations](/notebooks/investigations)**
 
 ## About
 
