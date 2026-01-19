@@ -1,0 +1,4 @@
+name: static
+type: duckdb
+options:
+  filename: ':memory:'

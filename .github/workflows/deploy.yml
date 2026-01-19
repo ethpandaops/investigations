@@ -1,0 +1,57 @@
+name: Deploy to GitHub Pages
+
+on:
+  push:
+    branches: ['master']
+  schedule:
+    - cron: '0 6 * * *'  # Daily rebuild at 6am UTC for fresh live data
+  workflow_dispatch:
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - run: npm ci
+
+      - name: Build Evidence Site
+        env:
+          BASE_PATH: /notebooks
+          EVIDENCE_SOURCE__xatu__host: ${{ secrets.XATU_HOST }}
+          EVIDENCE_SOURCE__xatu__port: ${{ secrets.XATU_PORT }}
+          EVIDENCE_SOURCE__xatu__user: ${{ secrets.XATU_USER }}
+          EVIDENCE_SOURCE__xatu__password: ${{ secrets.XATU_PASSWORD }}
+          EVIDENCE_SOURCE__xatu_cbt__host: ${{ secrets.XATU_CBT_HOST }}
+          EVIDENCE_SOURCE__xatu_cbt__port: ${{ secrets.XATU_CBT_PORT }}
+          EVIDENCE_SOURCE__xatu_cbt__user: ${{ secrets.XATU_CBT_USER }}
+          EVIDENCE_SOURCE__xatu_cbt__password: ${{ secrets.XATU_CBT_PASSWORD }}
+        run: |
+          npm run sources
+          npm run build
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: build/notebooks
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/deploy-pages@v4
+        id: deployment

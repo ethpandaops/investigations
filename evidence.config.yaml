@@ -1,0 +1,61 @@
+deployment:
+  basePath: /notebooks
+
+build:
+  strict: true
+
+appearance:
+  default: light
+  switcher: true
+
+theme:
+  colorPalettes:
+    default:
+      light:
+        - "#bb5a38"  # terracotta/rust primary
+        - "#6b8e8c"  # muted teal
+        - "#8b7355"  # warm brown
+        - "#5a7a6e"  # sage green
+        - "#a67c52"  # caramel
+        - "#7a6b5c"  # taupe
+        - "#9c6644"  # copper
+        - "#5d7a8c"  # slate blue
+      dark:
+        - "#d4785a"  # lighter terracotta
+        - "#8cb0ae"  # light muted teal
+        - "#a89070"  # light warm brown
+        - "#7a9a8e"  # light sage
+        - "#c69c72"  # light caramel
+        - "#9a8b7c"  # light taupe
+        - "#bc8664"  # light copper
+        - "#7d9aac"  # light slate
+  colors:
+    primary:
+      light: "#bb5a38"
+      dark: "#d4785a"
+    accent:
+      light: "#3d3a2a"
+      dark: "#e8e7dd"
+    base:
+      light: "#f4f3ed"
+      dark: "#1a1915"
+    info:
+      light: "#5d7a8c"
+      dark: "#7d9aac"
+    positive:
+      light: "#5a7a6e"
+      dark: "#7a9a8e"
+    warning:
+      light: "#a67c52"
+      dark: "#c69c72"
+    negative:
+      light: "#a65a4a"
+      dark: "#c67a6a"
+
+plugins:
+  components:
+    "@evidence-dev/core-components": {}
+
+  datasources:
+    "@evidence-dev/duckdb": {}
+    "evidence-connector-clickhouse": {}

@@ -1,0 +1,28 @@
+{
+  "name": "ethpandaops-notebooks",
+  "version": "0.0.1",
+  "private": true,
+  "scripts": {
+    "build": "evidence build",
+    "build:strict": "evidence build:strict",
+    "dev": "evidence dev --port 9847",
+    "test": "evidence build",
+    "sources": "evidence sources",
+    "sources:strict": "evidence sources --strict",
+    "preview": "evidence preview"
+  },
+  "engines": {
+    "npm": ">=7.0.0",
+    "node": ">=18.0.0"
+  },
+  "type": "module",
+  "dependencies": {
+    "@evidence-dev/core-components": "^5.4.0",
+    "@evidence-dev/duckdb": "^2.0.0",
+    "@evidence-dev/evidence": "^40.1.6",
+    "evidence-connector-clickhouse": "^0.0.2"
+  },
+  "overrides": {
+    "axios": "^1.7.4"
+  }
+}
