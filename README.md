@@ -2,7 +2,7 @@
 
 Ethereum network analysis using [Evidence.dev](https://evidence.dev) and [Xatu](https://github.com/ethpandaops/xatu) data.
 
-**Live site:** https://ethpandaops.github.io/notebooks
+**Live site:** https://ethpandaops.github.io/investigations
 
 ## Local development
 
