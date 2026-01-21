@@ -1,11 +1,19 @@
 ---
 title: Timing Games
 sidebar_position: 1
-description: Which entities delay their blocks? A week of timing data analyzed.
+description: Which entities delay their blocks to extract more MEV? A week of timing data analyzed.
+date: 2026-01-20
+author: samcm
+tags:
+  - timing-games
+  - mev
+  - block-timing
+  - validators
 ---
 
 <script>
     import PageMeta from '$lib/PageMeta.svelte';
+    import Section from '$lib/Section.svelte';
     import SqlSource from '$lib/SqlSource.svelte';
 </script>
 
@@ -13,19 +21,11 @@ description: Which entities delay their blocks? A week of timing data analyzed.
     date="2026-01-20"
     author="samcm"
     tags={["timing-games", "mev", "block-timing", "validators"]}
+    description="Which entities delay their blocks to extract more MEV? A week of timing data analyzed."
+    networks={["Ethereum Mainnet"]}
+    startTime="2026-01-13T00:00:00Z"
+    endTime="2026-01-20T23:59:59Z"
 />
-
-## Background
-
-Some validators delay their block proposals to squeeze out more MEV. This analysis looks at the past week to see who's doing it.
-
-## How we score timing behavior
-
-We calculate a **timing game score** (z-score) for each entity based on their median block arrival time:
-
-- **Conservative** (`z < 0`): Blocks arrive faster than average
-- **Neutral** (`0 ≤ z ≤ 2`): Normal timing
-- **Suspect** (`z > 2`): Blocks consistently arrive late, ~2 standard deviations above the mean
 
 ```sql entity_timing_analysis
 select * from xatu_cbt.timing_games_entity_timing_analysis
@@ -61,7 +61,54 @@ select * from xatu_cbt.timing_games_head_vote_impact
 select * from xatu_cbt.timing_games_scores_chart
 ```
 
-## Classification breakdown
+```sql filtered_scores
+select
+    entity,
+    block_count,
+    arrival_seconds,
+    z_score,
+    classification,
+    case
+        when z_score < 0 then '#22c55e'
+        when z_score >= 2 then '#ef4444'
+        else '#eab308'
+    end as bar_color,
+    round(((z_score + 3) / 8.0) * 100, 1) as bar_width_pct,
+    row_number() over (order by block_count desc) as rank
+from ${scores_chart}
+qualify rank <= ${inputs.top_n_filter.value}
+order by z_score desc
+```
+
+<Section type="question">
+
+## Question
+
+Which entities delay their blocks to extract more MEV?
+
+</Section>
+
+<Section type="background">
+
+## Background
+
+Some validators delay their block proposals to squeeze out more MEV. This analysis looks at the past week to see who's doing it.
+
+**How we score timing behavior**
+
+We calculate a **timing game score** (z-score) for each entity based on their median block arrival time:
+
+- **Conservative** (`z < 0`): Blocks arrive faster than average
+- **Neutral** (`0 ≤ z ≤ 2`): Normal timing
+- **Suspect** (`z > 2`): Blocks consistently arrive late, ~2 standard deviations above the mean
+
+</Section>
+
+<Section type="investigation">
+
+## Investigation
+
+### Classification Breakdown
 
 <BigValue
     data={classification_summary.filter(row => row.classification === 'Conservative')}
@@ -91,7 +138,7 @@ select * from xatu_cbt.timing_games_scores_chart
     <Column id="avg_arrival_seconds" title="Avg arrival (s)" fmt="num3" />
 </DataTable>
 
-## Head votes vs blob count
+### Head Votes vs Blob Count
 
 Late blocks with blobs get punished harder. The more blobs, the fewer head votes when you're late.
 
@@ -102,13 +149,30 @@ Late blocks with blobs get punished harder. The more blobs, the fewer head votes
     x="blob_count"
     y="head_vote_percentage"
     series="classification"
-    xAxisTitle="Blob count"
+    title="Head Vote Percentage by Blob Count and Classification"
     chartAreaHeight=400
     markers=true
     markerSize=8
     lineWidth=3
     yMin=70
     colorPalette={['#22c55e', '#eab308', '#ef4444']}
+    echartsOptions={{
+        title: {left: 'center'},
+        grid: {bottom: 50, left: 70, top: 60, right: 30},
+        xAxis: {name: 'Blob Count', nameLocation: 'center', nameGap: 35},
+        yAxis: {min: 70, max: 100},
+        graphic: [{
+            type: 'text',
+            left: 15,
+            top: 'center',
+            rotation: Math.PI / 2,
+            style: {
+                text: 'Head Vote (%)',
+                fontSize: 12,
+                fill: '#666'
+            }
+        }]
+    }}
 />
 
 <DataTable data={head_vote_impact} rows=25>
@@ -118,7 +182,7 @@ Late blocks with blobs get punished harder. The more blobs, the fewer head votes
     <Column id="total_attestations" title="Attestations" fmt="num0" />
 </DataTable>
 
-## Score distribution
+### Score Distribution
 
 <SqlSource source="xatu_cbt" query="timing_games_score_distribution" />
 
@@ -126,12 +190,27 @@ Late blocks with blobs get punished harder. The more blobs, the fewer head votes
     data={score_distribution}
     x="score_bucket"
     y="entity_count"
-    xAxisTitle="Z-score"
-    yAxisTitle="Entities"
+    title="Entity Count by Z-Score Bucket"
     sort=false
+    echartsOptions={{
+        title: {left: 'center'},
+        grid: {bottom: 50, left: 70, top: 60, right: 30},
+        xAxis: {name: 'Z-Score Bucket', nameLocation: 'center', nameGap: 35},
+        graphic: [{
+            type: 'text',
+            left: 15,
+            top: 'center',
+            rotation: Math.PI / 2,
+            style: {
+                text: 'Entity Count',
+                fontSize: 12,
+                fill: '#666'
+            }
+        }]
+    }}
 />
 
-## Timing scores by entity
+### Timing Scores by Entity
 
 <Dropdown
     name=top_n_filter
@@ -144,25 +223,6 @@ Late blocks with blobs get punished harder. The more blobs, the fewer head votes
     <DropdownOption value="100" valueLabel="Top 100" />
     <DropdownOption value="999999" valueLabel="All" />
 </Dropdown>
-
-```sql filtered_scores
-select
-    entity,
-    block_count,
-    arrival_seconds,
-    z_score,
-    classification,
-    case
-        when z_score < 0 then '#22c55e'
-        when z_score >= 2 then '#ef4444'
-        else '#eab308'
-    end as bar_color,
-    round(((z_score + 3) / 8.0) * 100, 1) as bar_width_pct,
-    row_number() over (order by block_count desc) as rank
-from ${scores_chart}
-qualify rank <= ${inputs.top_n_filter.value}
-order by z_score desc
-```
 
 Sorted by score (most suspect at top). Only showing entities with enough blocks to matter.
 
@@ -202,7 +262,7 @@ Sorted by score (most suspect at top). Only showing entities with enough blocks 
     </div>
 </div>
 
-## Top suspects (`z > 2`)
+### Top Suspects (`z > 2`)
 
 These entities consistently propose late. Min 10 blocks required.
 
@@ -215,7 +275,7 @@ These entities consistently propose late. Min 10 blocks required.
     <Column id="z_score" title="Z-score" fmt="num2" />
 </DataTable>
 
-## All entities
+### All Entities
 
 <SqlSource source="xatu_cbt" query="timing_games_entity_timing_analysis" />
 
@@ -226,3 +286,16 @@ These entities consistently propose late. Min 10 blocks required.
     <Column id="z_score" title="Z-score" fmt="num2" />
     <Column id="classification" title="Classification" />
 </DataTable>
+
+</Section>
+
+<Section type="takeaways">
+
+## Takeaways
+
+- Entities classified as "Suspect" (`z > 2`) consistently propose blocks later than average, likely to extract more MEV
+- Late blocks with blobs are punished harder - the more blobs, the fewer head votes when proposing late
+- The z-score distribution shows most entities cluster around neutral timing, with a tail of late proposers
+- Conservative entities (`z < 0`) show that fast block propagation is possible - they're not playing timing games
+
+</Section>

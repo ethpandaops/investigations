@@ -13,6 +13,7 @@ tags:
 
 <script>
     import PageMeta from '$lib/PageMeta.svelte';
+    import Section from '$lib/Section.svelte';
     import SqlSource from '$lib/SqlSource.svelte';
 </script>
 
@@ -20,15 +21,11 @@ tags:
     date="2026-01-21"
     author="samcm"
     tags={["blobs", "mempool", "l2", "data-availability"]}
+    description="Identifying which L2s and entities submit blobs that never reach the public mempool"
+    networks={["Ethereum Mainnet"]}
+    startTime="2026-01-17T00:00:00Z"
+    endTime="2026-01-20T23:59:59Z"
 />
-
-## Background
-
-**Data range: January 17-20, 2026 (4 days)**
-
-Blob transactions (EIP-4844) are typically broadcast to the public mempool before being included in blocks. However, some blobs appear in blocks without ever being seen in the mempool - these are "private blobs."
-
-This investigation identifies which entities submit private blobs and how often.
 
 ```sql totals
 select * from xatu.who_posts_private_blobs_totals
@@ -42,7 +39,34 @@ select * from xatu.who_posts_private_blobs_summary
 select * from xatu.who_posts_private_blobs_truly_private
 ```
 
-## Overall Blob Propagation
+<Section type="question">
+
+## Question
+
+Which entities submit blob transactions that bypass the public mempool, and how prevalent is this "private blob" behavior across L2s?
+
+</Section>
+
+<Section type="background">
+
+## Background
+
+Blob transactions (EIP-4844) are typically broadcast to the public mempool before being included in blocks. However, some blobs appear in blocks without ever being seen in the mempool - these are "private blobs."
+
+**Propagation categories:**
+- **Full Propagation** - All observing nodes had the blob in their mempool
+- **Partial Propagation** - Some nodes had it, some did not
+- **Truly Private** - No node had it in their mempool; it appeared only in the block
+
+**Data range:** January 17-20, 2026 (4 days)
+
+</Section>
+
+<Section type="investigation">
+
+## Investigation
+
+### Overall Blob Propagation
 
 How many blobs reach the public mempool before being included in blocks?
 
@@ -52,18 +76,26 @@ How many blobs reach the public mempool before being included in blocks?
     data={totals}
     x=status
     y=pct
+    title="Blob Propagation Status"
     chartAreaHeight=250
-    xAxisTitle="Propagation Status"
     colorPalette={['#ef4444', '#f59e0b', '#22c55e']}
     echartsOptions={{
-        grid: { left: 80, bottom: 50 },
-        yAxis: { name: 'Percentage (%)', nameLocation: 'middle', nameGap: 55 }
+        title: {left: 'center'},
+        grid: {bottom: 50, left: 80, top: 60, right: 30},
+        xAxis: {name: 'Propagation Status', nameLocation: 'center', nameGap: 35},
+        graphic: [{
+            type: 'text',
+            left: 15,
+            top: 'center',
+            rotation: Math.PI / 2,
+            style: {
+                text: 'Percentage (%)',
+                fontSize: 12,
+                fill: '#666'
+            }
+        }]
     }}
 />
-
-- **Full Propagation**: All observing nodes had the blob in their mempool
-- **Partial Propagation**: Some nodes had it, some didn't
-- **Truly Private**: No node had it in their mempool - it appeared only in the block
 
 <BigValue
     data={totals.filter(row => row.status === 'Truly Private')}
@@ -79,7 +111,9 @@ How many blobs reach the public mempool before being included in blocks?
     fmt="num2"
 />
 
-## Who Submits Private Blobs?
+### Who Submits Private Blobs?
+
+Which L2s and addresses are sending these truly private blobs?
 
 <SqlSource source="xatu" query="who_posts_private_blobs_truly_private" />
 
@@ -88,12 +122,14 @@ How many blobs reach the public mempool before being included in blocks?
     x=submitter_name
     y=private_blobs
     swapXY=true
+    title="Truly Private Blobs by Submitter"
     chartAreaHeight=400
     sort=false
     colorPalette={['#ef4444']}
     echartsOptions={{
-        grid: { left: 120, right: 40 },
-        xAxis: { name: 'Truly Private Blobs', nameLocation: 'middle', nameGap: 35 }
+        title: {left: 'center'},
+        grid: {bottom: 50, left: 120, top: 60, right: 40},
+        xAxis: {name: 'Truly Private Blobs', nameLocation: 'center', nameGap: 35}
     }}
 />
 
@@ -105,7 +141,7 @@ How many blobs reach the public mempool before being included in blocks?
 
 **Base** leads with 50 truly private blobs over 4 days, followed by **World Chain** (15) and an unknown address (11). Most major L2s have a small number of truly private blobs.
 
-## Propagation Quality by Submitter
+### Propagation Quality by Submitter
 
 Beyond truly private blobs, how well do each submitter's blobs propagate through the mempool?
 
@@ -116,15 +152,17 @@ Beyond truly private blobs, how well do each submitter's blobs propagate through
     x=submitter_name
     y=empty_rate
     swapXY=true
+    title="Mempool Empty Rate by Submitter"
     chartAreaHeight=600
     colorPalette={['#f59e0b']}
     echartsOptions={{
-        grid: { left: 120, right: 40 },
-        xAxis: { name: 'Avg Empty Rate (%)', nameLocation: 'middle', nameGap: 35 }
+        title: {left: 'center'},
+        grid: {bottom: 50, left: 120, top: 60, right: 40},
+        xAxis: {name: 'Avg Empty Rate (%)', nameLocation: 'center', nameGap: 35}
     }}
 />
 
-The "empty rate" is the percentage of nodes that don't have a blob in their mempool when the block arrives. Higher = worse propagation.
+The "empty rate" is the percentage of nodes that do not have a blob in their mempool when the block arrives. Higher = worse propagation.
 
 <DataTable data={summary} search=true rows=20>
     <Column id="submitter_name" title="Submitter" />
@@ -135,10 +173,16 @@ The "empty rate" is the percentage of nodes that don't have a blob in their memp
     <Column id="empty_rate" title="Empty Rate %" fmt="num1" />
 </DataTable>
 
-## Key Findings
+</Section>
 
-1. **Truly private blobs are rare** - only ~0.1% of all blobs never reach the public mempool
-2. **Base and World Chain** have the most private blobs by absolute count, but this represents a tiny fraction of their volume
-3. **Linea has the worst propagation** at 26% empty rate - their blobs often don't reach nodes before blocks arrive
-4. **Partial propagation is common** - most blobs reach some nodes but not others, especially for high-volume L2s
-5. **Unknown addresses** (not in our submitter mapping) account for some private blobs - worth investigating who these are
+<Section type="takeaways">
+
+## Takeaways
+
+- Truly private blobs are rare - only ~0.1% of all blobs never reach the public mempool
+- Base and World Chain have the most private blobs by absolute count, but this represents a tiny fraction of their volume
+- Linea has the worst propagation at 26% empty rate - their blobs often do not reach nodes before blocks arrive
+- Partial propagation is common - most blobs reach some nodes but not others, especially for high-volume L2s
+- Unknown addresses (not in our submitter mapping) account for some private blobs - worth investigating who these are
+
+</Section>
