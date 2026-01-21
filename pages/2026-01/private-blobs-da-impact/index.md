@@ -92,6 +92,7 @@ SUCCESS means the EL had all blobs in its txpool and returned them. EMPTY means 
     data={empty_rate_over_time}
     x=hour
     y=empty_rate
+    sort=false
     chartAreaHeight=300
     xAxisTitle="Time (UTC)"
     colorPalette={['#f59e0b']}
