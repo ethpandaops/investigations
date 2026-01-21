@@ -1,45 +1,18 @@
 # ethPandaOps Notebooks
 
-Ethereum blockchain analysis notebooks powered by [Evidence.dev](https://evidence.dev) and [Xatu](https://github.com/ethpandaops/xatu) data.
+Ethereum network analysis using [Evidence.dev](https://evidence.dev) and [Xatu](https://github.com/ethpandaops/xatu) data.
 
-## Live Site
+**Live site:** https://ethpandaops.github.io/notebooks
 
-https://ethpandaops.github.io/notebooks
+## Local development
 
-## Investigation Types
-
-### Live Investigations
-
-Query ClickHouse at build time, refreshed daily at 6:00 UTC.
-
-- Use when data needs to be current
-- Queries run during GitHub Actions build
-- Results cached until next build
-
-### Point-in-Time Investigations
-
-Use pre-baked parquet files from R2 for reproducibility.
-
-- Use for specific analyses with fixed time ranges
-- Data uploaded to `data.ethpandaops.io/notebooks/investigations/{slug}/`
-- Loaded via DuckDB `read_parquet()`
-
-## Local Development
-
-### Prerequisites
-
-- Node.js 18+
-- npm 7+
-
-### Setup
+Requires Node.js 18+ and npm 7+.
 
 ```bash
 npm install
 ```
 
-### Environment Variables
-
-For live ClickHouse queries, set these environment variables:
+For live ClickHouse queries, set environment variables:
 
 ```bash
 export XATU_HOST=your-host
@@ -53,54 +26,35 @@ export XATU_CBT_USER=your-cbt-user
 export XATU_CBT_PASSWORD=your-cbt-password
 ```
 
-### Run Development Server
+Run the dev server:
 
 ```bash
-npm run sources  # Fetch data from sources
-npm run dev      # Start dev server
+npm run sources  # Fetch data
+npm run dev      # Start server at localhost:3000
 ```
 
-Visit http://localhost:3000
-
-### Build for Production
-
-```bash
-npm run build
-npm run preview  # Preview production build
-```
-
-## Directory Structure
+## Directory structure
 
 ```
 notebooks/
-├── .github/workflows/deploy.yml   # GitHub Pages deployment
-├── sources/
-│   ├── xatu/connection.yaml       # Raw Xatu ClickHouse
-│   ├── xatu_cbt/connection.yaml   # Pre-aggregated ClickHouse
-│   └── static/connection.yaml     # DuckDB for R2 parquet
 ├── pages/
-│   ├── index.md                   # Homepage
-│   └── investigations/            # Investigation pages
-├── evidence.config.yaml           # Evidence configuration
-├── evidence.plugins.yaml          # Plugin configuration
-└── package.json
+│   ├── index.md              # Homepage
+│   ├── YYYY-MM/{slug}/       # Investigation pages (e.g., 2026-01/timing-games/)
+│   └── dashboards/           # Dashboard pages
+├── sources/
+│   ├── xatu/                 # Raw Xatu ClickHouse
+│   ├── xatu_cbt/             # Pre-aggregated ClickHouse
+│   └── static/               # DuckDB for R2 parquet files
+└── components/               # Svelte components
 ```
 
-## Creating New Investigations
+## Creating investigations
 
-**Sidebar auto-populates from folder structure** - just create a new investigation folder and it appears in navigation automatically.
+Pages are organized by month: `pages/YYYY-MM/{slug}/index.md`
 
-Use the Claude Code `/create-investigation` skill for guided creation.
+The sidebar auto-populates from folder structure.
 
-### Manual Creation
-
-1. Create page at `pages/investigations/{slug}/index.md`
-2. Add frontmatter with `title`, `sidebar_position`, and `description`
-3. For point-in-time: upload data to R2 and create SQL source in `sources/static/`
-4. Test locally with `npm run dev`
-5. Commit and push to deploy
-
-### Investigation Frontmatter
+### Frontmatter
 
 ```yaml
 ---
@@ -110,49 +64,22 @@ description: Brief description
 ---
 ```
 
-## Data Sources
+### Data sources
 
-### xatu_cbt (Pre-aggregated)
+**Live queries** (ClickHouse, refreshed daily at build):
+- `xatu` - Raw event data from sentries and relays
+- `xatu_cbt` - Pre-aggregated canonical beacon tables
 
-- `canonical_beacon_block`
-- `canonical_beacon_block_proposer_slashing`
-- `canonical_beacon_block_attester_slashing`
-- `canonical_beacon_block_execution_transaction`
-- `canonical_beacon_blob_sidecar`
-- And more...
-
-### xatu (Raw)
-
-Raw event data from Xatu sentries and relays.
-
-### static (DuckDB)
-
-Load parquet files from R2:
-
+**Point-in-time** (DuckDB, for reproducible snapshots):
 ```sql
 SELECT * FROM read_parquet('https://data.ethpandaops.io/notebooks/investigations/{slug}/data.parquet')
 ```
 
 ## Deployment
 
-Automated via GitHub Actions:
+GitHub Actions builds and deploys on push to `master` and daily at 6:00 UTC.
 
-- **Trigger**: Push to `master`, daily at 6:00 UTC, or manual dispatch
-- **Build**: Queries ClickHouse, generates static site
-- **Deploy**: GitHub Pages at `ethpandaops.github.io/notebooks`
-
-### Required Secrets
-
-| Secret | Description |
-|--------|-------------|
-| `XATU_HOST` | Xatu ClickHouse host |
-| `XATU_PORT` | Xatu ClickHouse port |
-| `XATU_USER` | Xatu ClickHouse username |
-| `XATU_PASSWORD` | Xatu ClickHouse password |
-| `XATU_CBT_HOST` | Xatu-CBT ClickHouse host |
-| `XATU_CBT_PORT` | Xatu-CBT ClickHouse port |
-| `XATU_CBT_USER` | Xatu-CBT ClickHouse username |
-| `XATU_CBT_PASSWORD` | Xatu-CBT ClickHouse password |
+Required secrets: `XATU_PASSWORD`, `XATU_CBT_PASSWORD`
 
 ## License
 
