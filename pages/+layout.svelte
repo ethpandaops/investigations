@@ -258,7 +258,7 @@
 	/* ========== DARK MODE ========== */
 
 	/* Header - dark background */
-	:global(.dark header) {
+	:global([data-theme="dark"] header) {
 		background:
 			url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E"),
 			linear-gradient(180deg, #1a1918 0%, #141312 100%) !important;
@@ -268,137 +268,137 @@
 	}
 
 	/* Header text - light for dark mode */
-	:global(.dark header a[href="/investigations/"]::after) {
+	:global([data-theme="dark"] header a[href="/investigations/"]::after) {
 		color: #e8e5dc !important;
 		text-shadow:
 			1px 1px 0 rgba(0,0,0,0.5),
 			-0.5px -0.5px 0 rgba(255, 255, 255, 0.05) !important;
 	}
 
-	:global(.dark header a[href="/investigations/"]::before) {
+	:global([data-theme="dark"] header a[href="/investigations/"]::before) {
 		color: #6b6560 !important;
 	}
 
 	/* Sidebar - dark mode */
-	:global(.dark aside.w-48) {
+	:global([data-theme="dark"] aside.w-48) {
 		border-left-color: #bb5a38 !important;
 	}
 
-	:global(.dark aside .font-semibold) {
+	:global([data-theme="dark"] aside .font-semibold) {
 		color: #6b6560 !important;
 	}
 
-	:global(.dark aside a.font-semibold:hover),
-	:global(.dark aside span.font-semibold:hover) {
+	:global([data-theme="dark"] aside a.font-semibold:hover),
+	:global([data-theme="dark"] aside span.font-semibold:hover) {
 		color: #9a958d !important;
 	}
 
-	:global(.dark aside a.py-1:not(.font-semibold)),
-	:global(.dark aside span.py-1:not(.font-semibold)) {
+	:global([data-theme="dark"] aside a.py-1:not(.font-semibold)),
+	:global([data-theme="dark"] aside span.py-1:not(.font-semibold)) {
 		color: #9a958d !important;
 	}
 
-	:global(.dark aside a.py-1:not(.font-semibold):hover) {
+	:global([data-theme="dark"] aside a.py-1:not(.font-semibold):hover) {
 		color: #e8e5dc !important;
 		background: linear-gradient(90deg, rgba(187, 90, 56, 0.15) 0%, transparent 100%) !important;
 	}
 
-	:global(.dark aside .text-primary) {
+	:global([data-theme="dark"] aside .text-primary) {
 		color: #d4a090 !important;
 		background: linear-gradient(90deg, rgba(187, 90, 56, 0.2) 0%, transparent 100%) !important;
 	}
 
-	:global(.dark aside .text-base-content-muted) {
+	:global([data-theme="dark"] aside .text-base-content-muted) {
 		color: #9a958d !important;
 	}
 
-	:global(.dark aside .text-base-content-muted:hover) {
+	:global([data-theme="dark"] aside .text-base-content-muted:hover) {
 		color: #e8e5dc !important;
 	}
 
-	:global(.dark aside > div > div:first-child .font-semibold) {
+	:global([data-theme="dark"] aside > div > div:first-child .font-semibold) {
 		color: #e8e5dc !important;
 	}
 
-	:global(.dark aside > div > div.pb-6:not(:first-child)::before) {
+	:global([data-theme="dark"] aside > div > div.pb-6:not(:first-child)::before) {
 		background: #2a2725 !important;
 	}
 
 	/* Landing page cards - dark mode */
-	:global(.dark article a[href*="/investigations/"]) {
+	:global([data-theme="dark"] article a[href*="/investigations/"]) {
 		background: linear-gradient(135deg, rgba(30, 28, 26, 0.9) 0%, rgba(26, 25, 24, 1) 100%) !important;
 		border-left-color: #bb5a38 !important;
 	}
 
-	:global(.dark article a[href*="/investigations/"] > div:first-child) {
+	:global([data-theme="dark"] article a[href*="/investigations/"] > div:first-child) {
 		color: #bb5a38 !important;
 	}
 
-	:global(.dark article a[href*="/investigations/"] > div:nth-child(2)) {
+	:global([data-theme="dark"] article a[href*="/investigations/"] > div:nth-child(2)) {
 		color: #e8e5dc !important;
 	}
 
-	:global(.dark article a[href*="/investigations/"] > div:nth-child(3)) {
+	:global([data-theme="dark"] article a[href*="/investigations/"] > div:nth-child(3)) {
 		color: #9a958d !important;
 	}
 
 	/* Landing page hero text - dark mode */
-	:global(.dark article > div > div > div:first-child) {
+	:global([data-theme="dark"] article > div > div > div:first-child) {
 		color: #e8e5dc !important;
 		text-shadow: 1px 1px 0 rgba(0,0,0,0.5) !important;
 	}
 
-	:global(.dark article > div > div > p) {
+	:global([data-theme="dark"] article > div > div > p) {
 		color: #9a958d !important;
 	}
 
-	:global(.dark article > div > div > p a) {
+	:global([data-theme="dark"] article > div > div > p a) {
 		color: #d4a090 !important;
 	}
 
 	/* Footer - dark mode */
-	:global(.dark article > div:last-child) {
+	:global([data-theme="dark"] article > div:last-child) {
 		border-top-color: #2a2725 !important;
 		color: #6b6560 !important;
 	}
 
-	:global(.dark article > div:last-child a) {
+	:global([data-theme="dark"] article > div:last-child a) {
 		color: #9a958d !important;
 		border-bottom-color: #3d3a2a !important;
 	}
 
 	/* Main content text - dark mode contrast fixes */
-	:global(.dark article) {
+	:global([data-theme="dark"] article) {
 		color: #c5c2ba !important;
 	}
 
-	:global(.dark article strong),
-	:global(.dark article b),
-	:global(.dark .markdown strong),
-	:global(.dark .markdown b) {
+	:global([data-theme="dark"] article strong),
+	:global([data-theme="dark"] article b),
+	:global([data-theme="dark"] .markdown strong),
+	:global([data-theme="dark"] .markdown b) {
 		color: #e8e5dc !important;
 	}
 
-	:global(.dark article h1),
-	:global(.dark article h2),
-	:global(.dark article h3),
-	:global(.dark article h4),
-	:global(.dark .markdown h1),
-	:global(.dark .markdown h2),
-	:global(.dark .markdown h3),
-	:global(.dark .markdown h4) {
+	:global([data-theme="dark"] article h1),
+	:global([data-theme="dark"] article h2),
+	:global([data-theme="dark"] article h3),
+	:global([data-theme="dark"] article h4),
+	:global([data-theme="dark"] .markdown h1),
+	:global([data-theme="dark"] .markdown h2),
+	:global([data-theme="dark"] .markdown h3),
+	:global([data-theme="dark"] .markdown h4) {
 		color: #e8e5dc !important;
 	}
 
-	:global(.dark article code),
-	:global(.dark .markdown code) {
+	:global([data-theme="dark"] article code),
+	:global([data-theme="dark"] .markdown code) {
 		background: #2a2725 !important;
 		border-color: #3d3a2a !important;
 		color: #d4a090 !important;
 	}
 
-	:global(.dark article a),
-	:global(.dark .markdown a) {
+	:global([data-theme="dark"] article a),
+	:global([data-theme="dark"] .markdown a) {
 		color: #d4a090 !important;
 	}
 </style>
