@@ -44,17 +44,11 @@ export const authors = {
         avatar: 'https://github.com/qu0b.png',
         github: 'https://github.com/qu0b'
     },
-    'raxhvl': {
-        name: 'raxhvl',
-        username: 'raxhvl',
-        avatar: 'https://github.com/raxhvl.png',
-        github: 'https://github.com/raxhvl'
-    },
-    'elasticroentgen': {
-        name: 'ElasticRoentgen',
-        username: 'elasticroentgen',
-        avatar: 'https://github.com/elasticroentgen.png',
-        github: 'https://github.com/elasticroentgen'
+    'barnabasbusa': {
+        name: 'Barnabas Busa',
+        username: 'barnabasbusa',
+        avatar: 'https://github.com/barnabasbusa.png',
+        github: 'https://github.com/barnabasbusa'
     },
     // Generic ethPandaOps author for team posts
     'ethpandaops': {

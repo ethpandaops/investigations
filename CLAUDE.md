@@ -1,6 +1,7 @@
 ## Creating new pages
 
 - Do not repeat the header in the page. It's already in the layout.
+- Investigations MUST use a fixed time range for the data so that the analysis is reproducible.
 
 ## Page Frontmatter Schema
 
@@ -44,8 +45,7 @@ Use these usernames for the `author` field to show profile pictures:
 | `skylenet` | Rafael Matias |
 | `mattevans` | Matty Evans |
 | `qu0b` | Stefan |
-| `raxhvl` | raxhvl |
-| `elasticroentgen` | ElasticRoentgen |
+| `barnabasbusa` | Barnabas Busa |
 | `ethpandaops` | ethPandaOps (team) |
 
 ## Displaying Page Metadata

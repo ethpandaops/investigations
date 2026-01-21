@@ -8,7 +8,7 @@
 
 <EvidenceDefaultLayout
 	{data}
-	logo="{base}/logo.png"
+	logo="{base}/panda.png"
 	builtWithEvidence={false}
 	maxWidth={1600}
 >
@@ -16,19 +16,109 @@
 </EvidenceDefaultLayout>
 
 <style>
-	/* Make logo bigger and add title text */
-	:global(header a[href="/investigations/"] img) {
-		height: 2rem !important;
+	/* ========== HEADER: NOIR DETECTIVE AGENCY ========== */
+
+	/* Header container - the agency entrance */
+	:global(header) {
+		background:
+			/* Subtle film grain texture */
+			url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E"),
+			linear-gradient(180deg, #f8f7f3 0%, #f4f2eb 100%) !important;
+		background-blend-mode: overlay, normal !important;
+		border-bottom: none !important;
+		padding: 1rem 0 !important;
+		min-height: 5rem !important;
+		position: relative !important;
+		box-shadow:
+			0 1px 0 #e8e5dc,
+			0 4px 12px -4px rgba(61, 58, 42, 0.08) !important;
 	}
+
+	/* Terracotta accent line - case file edge */
+	:global(header::after) {
+		content: "" !important;
+		position: absolute !important;
+		bottom: 0 !important;
+		left: 0 !important;
+		width: 100% !important;
+		height: 3px !important;
+		background: linear-gradient(
+			90deg,
+			#bb5a38 0%,
+			#bb5a38 30%,
+			#d4a090 50%,
+			transparent 100%
+		) !important;
+	}
+
+	/* Space between header and content */
+	:global(header + div),
+	:global(header + main),
+	:global(body > div > div:nth-child(2)) {
+		margin-top: 1.5rem !important;
+	}
+
+	/* Vertical alignment - sidebar and main content */
+	:global(div.flex.flex-row) {
+		align-items: flex-start !important;
+	}
+
+	/* Main content area alignment */
+	:global(main) {
+		padding-top: 0 !important;
+	}
+
+	/* Logo link container - the agency sign */
 	:global(header a[href="/investigations/"]) {
 		display: flex !important;
 		align-items: center !important;
-		gap: 0.5rem !important;
+		gap: 1rem !important;
+		text-decoration: none !important;
+		position: relative !important;
 	}
+
+	/* Detective panda - THE HERO */
+	:global(header a[href="/investigations/"] img) {
+		height: 3.5rem !important;
+		width: auto !important;
+		filter: drop-shadow(2px 3px 4px rgba(61, 58, 42, 0.2)) !important;
+		transition: transform 0.2s ease-out, filter 0.2s ease-out !important;
+	}
+
+	:global(header a[href="/investigations/"]:hover img) {
+		transform: scale(1.03) !important;
+		filter: drop-shadow(3px 4px 6px rgba(61, 58, 42, 0.25)) !important;
+	}
+
+	/* INVESTIGATIONS - etched glass typography */
 	:global(header a[href="/investigations/"]::after) {
-		content: "ethPandaOps";
-		font-weight: 600;
-		font-size: 1.1rem;
+		content: "INVESTIGATIONS" !important;
+		font-family: "Courier New", Courier, monospace !important;
+		font-weight: 700 !important;
+		font-size: 1.4rem !important;
+		letter-spacing: 0.22em !important;
+		text-transform: uppercase !important;
+		color: #3d3a2a !important;
+		position: relative !important;
+		padding-bottom: 0.4rem !important;
+		/* Subtle text shadow for etched effect */
+		text-shadow:
+			1px 1px 0 rgba(255,255,255,0.8),
+			-0.5px -0.5px 0 rgba(61, 58, 42, 0.1) !important;
+	}
+
+	/* ethPandaOps credit - subtle agency watermark */
+	:global(header a[href="/investigations/"]::before) {
+		content: "ethPandaOps" !important;
+		font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, monospace !important;
+		font-weight: 500 !important;
+		font-size: 0.6rem !important;
+		letter-spacing: 0.12em !important;
+		text-transform: uppercase !important;
+		color: #9a958d !important;
+		position: absolute !important;
+		left: 4.5rem !important;
+		bottom: -0.1rem !important;
 	}
 	/* Hide SQL query UI buttons */
 	:global(button[aria-label="show-sql"]),
