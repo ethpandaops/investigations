@@ -1,8 +1,8 @@
--- Daily percentile ranking of our high-peer node
+-- Hourly percentile ranking of our high-peer node
 -- Shows p25, median, mean, p75 percentile rankings
 WITH block_rankings AS (
     SELECT
-        toDate(slot_start_date_time) as day,
+        toStartOfHour(slot_start_date_time) as hour,
         slot,
         block_root,
         node_id,
@@ -16,7 +16,7 @@ WITH block_rankings AS (
 ),
 our_node_percentiles AS (
     SELECT
-        day,
+        hour,
         slot,
         block_root,
         (1 - (rank - 1) / total_nodes) * 100 as percentile
@@ -24,11 +24,11 @@ our_node_percentiles AS (
     WHERE node_id = 'utility-mainnet-prysm-geth-tysm-003'
 )
 SELECT
-    day,
+    formatDateTime(hour, '%m-%d') as day,
     round(quantile(0.25)(percentile), 1) as "P25",
     round(median(percentile), 1) as "Median",
     round(avg(percentile), 1) as "Mean",
     round(quantile(0.75)(percentile), 1) as "P75"
 FROM our_node_percentiles
-GROUP BY day
-ORDER BY day ASC
+GROUP BY hour
+ORDER BY hour ASC
