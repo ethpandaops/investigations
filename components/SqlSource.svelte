@@ -36,7 +36,7 @@
 <style>
     .sql-source {
         margin: 0.5rem 0 1rem 0;
-        border: 1px solid var(--grey-300, #e0e0e0);
+        border: 1px solid #e0e0e0;
         border-radius: 4px;
         font-size: 0.875rem;
     }
@@ -44,7 +44,8 @@
     summary {
         padding: 0.5rem 0.75rem;
         cursor: pointer;
-        background: var(--grey-100, #f5f5f5);
+        background: #f5f5f5;
+        color: #5c5650;
         font-family: monospace;
         list-style: none;
     }
@@ -61,7 +62,7 @@
     .sql-code {
         margin: 0;
         padding: 1rem;
-        background: var(--grey-50, #fafafa);
+        background: #fafafa;
         overflow-x: auto;
         font-size: 0.8125rem;
         line-height: 1.5;
@@ -69,5 +70,24 @@
 
     code {
         font-family: 'SF Mono', Monaco, 'Cascadia Code', monospace;
+        color: #3d3a2a;
+    }
+
+    /* Dark mode */
+    :global([data-theme="dark"]) .sql-source {
+        border-color: #3d3a2a;
+    }
+
+    :global([data-theme="dark"]) summary {
+        background: #2a2725;
+        color: #9a958d;
+    }
+
+    :global([data-theme="dark"]) .sql-code {
+        background: #1a1918;
+    }
+
+    :global([data-theme="dark"]) code {
+        color: #c5c2ba;
     }
 </style>
