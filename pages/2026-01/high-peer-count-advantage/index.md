@@ -190,12 +190,18 @@ How does our node's timing compare to the network median and fastest nodes over 
     title="Hourly Block Arrival Time Comparison"
     yFmt="num0"
     chartAreaHeight=400
+    colorPalette={['#2563eb', '#ea580c', '#16a34a']}
     echartsOptions={{
         title: {left: 'center'},
         grid: {bottom: 50, left: 70, top: 60, right: 120},
         xAxis: {type: 'category', name: 'Time', nameLocation: 'center', nameGap: 35},
         yAxis: {min: 0},
         legend: {show: true, right: 10, orient: 'vertical', top: 'center'},
+        series: [
+            {name: 'Our Node', lineStyle: {width: 3}},
+            {name: 'Network Median', lineStyle: {width: 2}},
+            {name: 'Network Fastest', lineStyle: {width: 2}}
+        ],
         graphic: [{
             type: 'text',
             left: 15,
