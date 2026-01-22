@@ -1,5 +1,5 @@
 ---
-title: RPC Snooper Overhead Analysis
+title: RPC Snooper Overhead
 sidebar_position: 3
 description: Measuring the latency impact of deploying rpc-snooper between CL and EL on 7870 reference nodes
 date: 2026-01-16

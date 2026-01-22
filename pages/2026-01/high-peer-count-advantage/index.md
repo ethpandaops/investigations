@@ -1,5 +1,5 @@
 ---
-title: Does High Peer Count Help?
+title: High Peer Count Blocks
 sidebar_position: 6
 description: Investigating whether a node with 6k+ peers sees blocks faster than the rest of the network
 date: 2026-01-22

@@ -4,10 +4,32 @@
 	import { EvidenceDefaultLayout } from '@evidence-dev/core-components';
 	import { base } from '$app/paths';
 	export let data;
+
+	/**
+	 * Recursively filter out pages with hidden: true in frontMatter
+	 * @param {Object} node - The page manifest node
+	 * @returns {Object} - Filtered node
+	 */
+	function filterHiddenPages(node) {
+		if (!node) return node;
+		const filteredChildren = {};
+		for (const [key, child] of Object.entries(node.children || {})) {
+			if (child.frontMatter?.hidden === true) {
+				continue;
+			}
+			filteredChildren[key] = filterHiddenPages(child);
+		}
+		return { ...node, children: filteredChildren };
+	}
+
+	// Filter hidden pages from the manifest
+	$: filteredData = data.pagesManifest
+		? { ...data, pagesManifest: filterHiddenPages(data.pagesManifest) }
+		: data;
 </script>
 
 <EvidenceDefaultLayout
-	{data}
+	data={filteredData}
 	logo="{base}/panda.png"
 	builtWithEvidence={false}
 	maxWidth={1600}

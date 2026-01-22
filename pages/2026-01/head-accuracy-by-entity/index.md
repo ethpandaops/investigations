@@ -4,6 +4,7 @@ sidebar_position: 2
 description: Comparing head vote accuracy across Lido CSM, Rocketpool, Solo Stakers, and the rest of the network
 date: 2026-01-20
 author: samcm
+hidden: true
 tags:
   - head-votes
   - attestations

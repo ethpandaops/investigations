@@ -4,6 +4,7 @@ sidebar_position: 4
 description: Analyzing how blob mempool propagation affects engine_getBlobsV2 success rates and per-node head timing
 date: 2026-01-21
 author: samcm
+hidden: true
 tags:
   - blobs
   - mev

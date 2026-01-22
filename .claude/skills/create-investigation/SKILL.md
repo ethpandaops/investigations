@@ -160,11 +160,13 @@ SELECT ... FROM xatu_cbt.table_name
 
 5. **Action-based section headers** - Use "When Attesting" not "Attester Analysis".
 
-6. **Don't repeat header** - The title from frontmatter is already rendered by the layout.
+6. **No "Analysis" suffix in titles** - "Analysis" is implied; use "RPC Snooper Overhead" not "RPC Snooper Overhead Analysis".
 
-7. **Sort time series data ascending** - SQL queries for charts MUST include `ORDER BY date_column ASC` to ensure data is sorted chronologically. Charts will display incorrectly if data is not sorted.
+7. **Don't repeat header** - The title from frontmatter is already rendered by the layout.
 
-8. **Use high-contrast colors** - Multi-line charts MUST use `colorPalette` with high-contrast colors. Recommended palette:
+8. **Sort time series data ascending** - SQL queries for charts MUST include `ORDER BY date_column ASC` to ensure data is sorted chronologically. Charts will display incorrectly if data is not sorted.
+
+9. **Use high-contrast colors** - Multi-line charts MUST use `colorPalette` with high-contrast colors. Recommended palette:
    - Red: `#dc2626`
    - Blue: `#2563eb`
    - Purple: `#9333ea`
@@ -172,15 +174,15 @@ SELECT ... FROM xatu_cbt.table_name
    - Orange: `#ea580c`
    Example: `colorPalette={['#2563eb', '#ea580c', '#16a34a']}`
 
-9. **Line styling for emphasis** - Make the primary metric line thicker (width: 3), use dashed lines for secondary metrics like averages/means:
-   ```javascript
-   series: [
-       {name: 'Primary', lineStyle: {width: 3}},
-       {name: 'Secondary', lineStyle: {width: 2, type: 'dashed'}}
-   ]
-   ```
+10. **Line styling for emphasis** - Make the primary metric line thicker (width: 3), use dashed lines for secondary metrics like averages/means:
+    ```javascript
+    series: [
+        {name: 'Primary', lineStyle: {width: 3}},
+        {name: 'Secondary', lineStyle: {width: 2, type: 'dashed'}}
+    ]
+    ```
 
-10. **Reference lines with markLine** - For horizontal reference lines (e.g., "random chance"), use `markLine` NOT a separate series (which corrupts the x-axis). Position label inside the chart:
+11. **Reference lines with markLine** - For horizontal reference lines (e.g., "random chance"), use `markLine` NOT a separate series (which corrupts the x-axis). Position label inside the chart:
     ```javascript
     series: [{
         markLine: {
@@ -193,7 +195,7 @@ SELECT ... FROM xatu_cbt.table_name
     }]
     ```
 
-11. **Human-readable SQL column names** - Use column aliases that will appear nicely in chart legends:
+12. **Human-readable SQL column names** - Use column aliases that will appear nicely in chart legends:
     ```sql
     SELECT
         hour,
@@ -201,9 +203,9 @@ SELECT ... FROM xatu_cbt.table_name
         round(avg(median_time)) as "Network Median"
     ```
 
-12. **Don't describe chart features that don't exist** - Never claim "tight IQR band", "green for negative values", or specific colors in prose unless the chart actually shows them. Verify visually before writing conclusions.
+13. **Don't describe chart features that don't exist** - Never claim "tight IQR band", "green for negative values", or specific colors in prose unless the chart actually shows them. Verify visually before writing conclusions.
 
-13. **Per-block comparisons for timing analysis** - When comparing timing between nodes, calculate metrics per-block first, then aggregate. Don't compare raw averages across all data which can be misleading.
+14. **Per-block comparisons for timing analysis** - When comparing timing between nodes, calculate metrics per-block first, then aggregate. Don't compare raw averages across all data which can be misleading.
 
 
 ## SQL Source Files
