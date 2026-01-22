@@ -109,7 +109,7 @@ How often does our high-peer node see blocks first compared to the rest of the n
             markLine: {
                 silent: true,
                 symbol: 'none',
-                label: {show: true, position: 'end', formatter: 'Random chance'},
+                label: {show: true, position: 'insideEndTop', formatter: 'Random chance (0.56%)'},
                 lineStyle: {type: 'dashed', color: '#888'},
                 data: [{yAxis: 0.56}]
             }
