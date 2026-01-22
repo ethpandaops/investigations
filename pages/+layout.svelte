@@ -50,8 +50,6 @@
 		border-bottom: none !important;
 		padding: 1rem 0 !important;
 		min-height: 5rem !important;
-		position: sticky !important;
-		top: 0 !important;
 		z-index: 50 !important;
 		box-shadow:
 			0 1px 0 #e8e5dc,
