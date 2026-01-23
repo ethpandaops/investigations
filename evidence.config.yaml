@@ -1,5 +1,5 @@
 deployment:
-  basePath: /investigations
+  basePath: ""
 
 build:
   strict: true
