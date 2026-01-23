@@ -15,6 +15,116 @@ tags:
     import PageMeta from '$lib/PageMeta.svelte';
     import Section from '$lib/Section.svelte';
     import SqlSource from '$lib/SqlSource.svelte';
+    import { ECharts } from '@evidence-dev/core-components';
+
+    // Transform nodes_over_time data for custom ECharts
+    $: nodesOverTimeConfig = {
+        title: {
+            text: 'Distinct Nodes Observed per Hour',
+            left: 'center'
+        },
+        tooltip: {
+            trigger: 'axis'
+        },
+        grid: {
+            left: 80,
+            right: 30,
+            bottom: 100,
+            top: 60
+        },
+        xAxis: {
+            type: 'category',
+            data: nodes_over_time?.map(d => d.hour) || [],
+            axisLabel: {
+                interval: 23,
+                rotate: 45,
+                fontSize: 10
+            },
+            name: 'Time (UTC)',
+            nameLocation: 'center',
+            nameGap: 70
+        },
+        yAxis: {
+            type: 'value',
+            min: 10000,
+            name: 'Distinct Nodes',
+            nameLocation: 'center',
+            nameGap: 50,
+            nameRotate: 90
+        },
+        series: [{
+            data: nodes_over_time?.map(d => d['Distinct Nodes']) || [],
+            type: 'line',
+            smooth: false,
+            itemStyle: {
+                color: '#2563eb'
+            },
+            lineStyle: {
+                color: '#2563eb'
+            }
+        }],
+        dataZoom: [{
+            type: 'slider',
+            start: 0,
+            end: 100,
+            bottom: 5,
+            height: 30
+        }]
+    };
+
+    // Transform nodes_by_client data for custom ECharts (multi-series)
+    $: nodesByClientConfig = (() => {
+        if (!nodes_by_client || nodes_by_client.length === 0) return {};
+
+        // Get unique hours and clients
+        const hours = [...new Set(nodes_by_client.map(d => d.hour))];
+        const clients = [...new Set(nodes_by_client.map(d => d.client))];
+
+        // Create a lookup map for quick access
+        const dataMap = {};
+        nodes_by_client.forEach(d => {
+            if (!dataMap[d.client]) dataMap[d.client] = {};
+            dataMap[d.client][d.hour] = d.nodes;
+        });
+
+        // Build series for each client
+        const colorPalette = ['#2563eb', '#dc2626', '#16a34a', '#9333ea', '#ea580c', '#0891b2', '#4f46e5', '#84cc16', '#f97316', '#6366f1'];
+        const series = clients.map((client, i) => ({
+            name: client,
+            type: 'line',
+            data: hours.map(h => dataMap[client]?.[h] || 0),
+            itemStyle: { color: colorPalette[i % colorPalette.length] },
+            lineStyle: { color: colorPalette[i % colorPalette.length] }
+        }));
+
+        return {
+            title: { text: 'Distinct Nodes by Client Type', left: 'center' },
+            tooltip: { trigger: 'axis' },
+            legend: {
+                data: clients,
+                right: 10,
+                orient: 'vertical',
+                top: 'center'
+            },
+            grid: { left: 80, right: 120, bottom: 100, top: 60 },
+            xAxis: {
+                type: 'category',
+                data: hours,
+                axisLabel: { interval: 23, rotate: 45, fontSize: 9 },
+                name: 'Time (UTC)',
+                nameLocation: 'center',
+                nameGap: 70
+            },
+            yAxis: {
+                type: 'value',
+                name: 'Distinct Nodes',
+                nameLocation: 'center',
+                nameGap: 50,
+                nameRotate: 90
+            },
+            series: series
+        };
+    })();
 </script>
 
 <PageMeta
@@ -70,33 +180,7 @@ This analysis uses data from **synthetic heartbeat** messages - periodic pings t
 
 <SqlSource source="xatu" query="ipv4_nodes_over_time" />
 
-<LineChart
-    data={nodes_over_time}
-    x=hour
-    y="Distinct Nodes"
-    sort=false
-    title="Distinct Nodes Observed per Hour"
-    chartAreaHeight=300
-    colorPalette={['#2563eb']}
-    xTickMarks=12
-    echartsOptions={{
-        title: {left: 'center'},
-        grid: {left: 80, bottom: 100, top: 60, right: 30},
-        xAxis: {name: 'Time (UTC)', nameLocation: 'center', nameGap: 75, axisLabel: {rotate: 45, fontSize: 9, interval: 23}},
-        yAxis: {min: 10000},
-        graphic: [{
-            type: 'text',
-            left: 15,
-            top: 'center',
-            rotation: Math.PI / 2,
-            style: {
-                text: 'Distinct Nodes',
-                fontSize: 12,
-                fill: '#666'
-            }
-        }]
-    }}
-/>
+<ECharts config={nodesOverTimeConfig} />
 
 Over the week, we consistently observe around **10,000-12,000 distinct nodes** per hour via synthetic heartbeat.
 
@@ -104,23 +188,7 @@ Over the week, we consistently observe around **10,000-12,000 distinct nodes** p
 
 <SqlSource source="xatu" query="ipv4_nodes_by_client" />
 
-<LineChart
-    data={nodes_by_client}
-    x=hour
-    y=nodes
-    series=client
-    sort=false
-    title="Distinct Nodes by Client Type"
-    chartAreaHeight=350
-    xAxisTitle="Time (UTC)"
-    yAxisTitle="Distinct Nodes"
-    colorPalette={['#2563eb', '#dc2626', '#16a34a', '#9333ea', '#ea580c', '#0891b2', '#4f46e5', '#84cc16', '#f97316', '#6366f1']}
-    echartsOptions={{
-        title: {left: 'center'},
-        grid: {left: 80, bottom: 50, top: 60, right: 120},
-        legend: {show: true, right: 10, orient: 'vertical', top: 'center'}
-    }}
-/>
+<ECharts config={nodesByClientConfig} />
 
 **Lighthouse** dominates with ~7,100 nodes, followed by **Prysm** (~3,900), **Nimbus** (~1,600), and **Teku** (~1,300).
 
