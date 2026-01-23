@@ -180,7 +180,7 @@ This analysis uses data from **synthetic heartbeat** messages - periodic pings t
 
 <SqlSource source="xatu" query="ipv4_nodes_over_time" />
 
-<ECharts config={nodesOverTimeConfig} />
+<ECharts config={nodesOverTimeConfig} height="500px" />
 
 Over the week, we consistently observe around **10,000-12,000 distinct nodes** per hour via synthetic heartbeat.
 
@@ -188,7 +188,7 @@ Over the week, we consistently observe around **10,000-12,000 distinct nodes** p
 
 <SqlSource source="xatu" query="ipv4_nodes_by_client" />
 
-<ECharts config={nodesByClientConfig} />
+<ECharts config={nodesByClientConfig} height="500px" />
 
 **Lighthouse** dominates with ~7,100 nodes, followed by **Prysm** (~3,900), **Nimbus** (~1,600), and **Teku** (~1,300).
 
