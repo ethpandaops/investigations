@@ -1,14 +1,13 @@
--- Blob availability submitter summary
--- Shows which L2s/entities submit blobs that weren't available to nodes when blocks arrived
--- An "unavailable" blob = all nodes got EMPTY from engine_getBlobsV2 (not in any node's mempool at block time)
+-- Unavailable blob rate for top blob posters (normalized by volume)
+-- Shows percentage of each submitter's blobs that were unavailable
+-- Limited to top 15 submitters by total blob volume
 -- Fixed time window: 2026-01-17 to 2026-01-21
 WITH getblobs_by_blob AS (
     SELECT
         slot,
         arrayJoin(versioned_hashes) AS versioned_hash,
         countIf(status = 'SUCCESS') AS success_nodes,
-        countIf(status = 'EMPTY') AS empty_nodes,
-        count() AS total_nodes
+        countIf(status = 'EMPTY') AS empty_nodes
     FROM consensus_engine_api_get_blobs
     WHERE meta_network_name = 'mainnet'
       AND slot_start_date_time >= '2026-01-17 00:00:00'
@@ -19,7 +18,6 @@ WITH getblobs_by_blob AS (
 blob_propagation AS (
     SELECT
         versioned_hash,
-        avg(empty_nodes * 100.0 / total_nodes) AS avg_empty_rate,
         CASE
             WHEN sum(success_nodes) = 0 THEN 'unavailable'
             WHEN sum(empty_nodes) = 0 THEN 'full_propagation'
@@ -48,15 +46,12 @@ submitter_names AS (
 SELECT
     COALESCE(s.name, 'Unknown') AS submitter_name,
     count() AS total_blobs,
-    countIf(p.propagation_status = 'unavailable') AS unavailable,
-    countIf(p.propagation_status = 'partial_propagation') AS partial,
-    countIf(p.propagation_status = 'full_propagation') AS full_propagation,
-    round(avg(p.avg_empty_rate), 1) AS empty_rate
+    countIf(p.propagation_status = 'unavailable') AS unavailable_blobs,
+    countIf(p.propagation_status = 'unavailable') * 1.0 / count() AS unavailable_rate
 FROM block_blobs b
 LEFT JOIN blob_propagation p ON b.versioned_hash = p.versioned_hash
 LEFT JOIN submitter_names s ON lower(b.sender_address) = s.address_clean
 WHERE p.versioned_hash IS NOT NULL
 GROUP BY submitter_name
-HAVING total_blobs >= 100
-ORDER BY unavailable DESC, empty_rate DESC
-LIMIT 30
+ORDER BY total_blobs DESC
+LIMIT 15

@@ -1,7 +1,7 @@
 ---
-title: Who Posts Private Blobs?
+title: Who Posts Unavailable Blobs?
 sidebar_position: 5
-description: Identifying which L2s and entities submit blobs that never reach the public mempool
+description: Identifying which L2s and entities submit blobs that aren't available to nodes when blocks arrive
 date: 2026-01-21
 author: samcm
 tags:
@@ -21,7 +21,7 @@ tags:
     date="2026-01-21"
     author="samcm"
     tags={["blobs", "mempool", "l2", "data-availability"]}
-    description="Identifying which L2s and entities submit blobs that never reach the public mempool"
+    description="Identifying which L2s and entities submit blobs that aren't available to nodes when blocks arrive"
     networks={["Ethereum Mainnet"]}
     startTime="2026-01-17T00:00:00Z"
     endTime="2026-01-20T23:59:59Z"
@@ -35,15 +35,15 @@ select * from xatu.who_posts_private_blobs_totals
 select * from xatu.who_posts_private_blobs_summary
 ```
 
-```sql truly_private
-select * from xatu.who_posts_private_blobs_truly_private
+```sql rate
+select * from xatu.who_posts_private_blobs_rate
 ```
 
 <Section type="question">
 
 ## Question
 
-Which entities submit blob transactions that bypass the public mempool, and how prevalent is this "private blob" behavior across L2s?
+Which entities submit blob transactions that aren't available to nodes when blocks arrive, and how prevalent is this behavior across L2s?
 
 </Section>
 
@@ -51,14 +51,12 @@ Which entities submit blob transactions that bypass the public mempool, and how 
 
 ## Background
 
-Blob transactions (EIP-4844) are typically broadcast to the public mempool before being included in blocks. However, some blobs appear in blocks without ever being seen in the mempool - these are "private blobs."
+Blob transactions are typically broadcast to the public mempool before being included in blocks. This investigation examines which blobs were **not available** to our reference nodes when blocks arrived.
 
 **Propagation categories:**
-- **Full Propagation** - All observing nodes had the blob in their mempool
+- **Full Propagation** - All observing nodes had the blob in their mempool when the block arrived
 - **Partial Propagation** - Some nodes had it, some did not
-- **Truly Private** - No node had it in their mempool; it appeared only in the block
-
-**Data range:** January 17-20, 2026 (4 days)
+- **Unavailable** - No node had the blob in their mempool when the block arrived
 
 </Section>
 
@@ -66,9 +64,13 @@ Blob transactions (EIP-4844) are typically broadcast to the public mempool befor
 
 ## Investigation
 
-### Overall Blob Propagation
+**Important methodology note:** We monitor blob availability across **[7870 reference nodes](https://lab.ethpandaops.io/ethereum/execution/payloads)** via `engine_getBlobsV2`. When a block arrives, we check whether each node had the blob in its mempool. A blob being "unavailable" means our nodes didn't have it when the block was proposed. This doesn't necessarily mean the blob was never in the public mempool, only that it wasn't in the mempool on any of our nodes at the time the block was received for each node.
 
-How many blobs reach the public mempool before being included in blocks?
+However, from a practical standpoint, if a blob isn't available to nodes when the block arrives **it's effectively the same as if the blob was never in the public mempool.** These nodes were not able to take advantage of the `engine_getBlobsV2` API.
+
+### Overall Blob Availability
+
+How many blobs were available to our reference nodes when blocks arrived?
 
 <SqlSource source="xatu" query="who_posts_private_blobs_totals" />
 
@@ -76,13 +78,13 @@ How many blobs reach the public mempool before being included in blocks?
     data={totals}
     x=status
     y=pct
-    title="Blob Propagation Status"
+    title="Blob Availability Status"
     chartAreaHeight=250
     colorPalette={['#ef4444', '#f59e0b', '#22c55e']}
     echartsOptions={{
         title: {left: 'center'},
         grid: {bottom: 50, left: 80, top: 60, right: 30},
-        xAxis: {name: 'Propagation Status', nameLocation: 'center', nameGap: 35},
+        xAxis: {name: 'Availability Status', nameLocation: 'center', nameGap: 35},
         graphic: [{
             type: 'text',
             left: 15,
@@ -97,53 +99,41 @@ How many blobs reach the public mempool before being included in blocks?
     }}
 />
 
-<BigValue
-    data={totals.filter(row => row.status === 'Truly Private')}
-    value="blob_count"
-    title="Truly Private Blobs"
-    fmt="num0"
-/>
+### Unavailable Rate (Top 15 by Volume)
 
-<BigValue
-    data={totals.filter(row => row.status === 'Truly Private')}
-    value="pct"
-    title="Private Rate (%)"
-    fmt="num2"
-/>
+Looking at the top 15 blob posters by volume, we can compare unavailable rates fairly.
 
-### Who Submits Private Blobs?
-
-Which L2s and addresses are sending these truly private blobs?
-
-<SqlSource source="xatu" query="who_posts_private_blobs_truly_private" />
+<SqlSource source="xatu" query="who_posts_private_blobs_rate" />
 
 <BarChart
-    data={truly_private}
+    data={rate}
     x=submitter_name
-    y=private_blobs
+    y=unavailable_rate
+    yFmt=pct2
     swapXY=true
-    title="Truly Private Blobs by Submitter"
-    chartAreaHeight=400
-    sort=false
-    colorPalette={['#ef4444']}
+    title="Unavailable Rate by Submitter"
+    chartAreaHeight=500
+    sort=unavailable_rate
+    colorPalette={['#8b5cf6']}
     echartsOptions={{
         title: {left: 'center'},
         grid: {bottom: 50, left: 120, top: 60, right: 40},
-        xAxis: {name: 'Truly Private Blobs', nameLocation: 'center', nameGap: 35}
+        xAxis: {name: 'Unavailable Rate', nameLocation: 'center', nameGap: 35}
     }}
 />
 
-<DataTable data={truly_private} rows=15>
+<DataTable data={rate} rows=15 sort=unavailable_rate sortOrder=desc>
     <Column id="submitter_name" title="Submitter" />
-    <Column id="address" title="Address" />
-    <Column id="private_blobs" title="Private Blobs" fmt="num0" />
+    <Column id="total_blobs" title="Total Blobs" fmt="num0" />
+    <Column id="unavailable_blobs" title="Unavailable" fmt="num0" />
+    <Column id="unavailable_rate" title="Rate" fmt="pct2" />
 </DataTable>
 
-**Base** leads with 50 truly private blobs over 4 days, followed by **World Chain** (15) and an unknown address (11). Most major L2s have a small number of truly private blobs.
+The table above shows unavailable rates for top blob posters. High-volume L2s like Base and World Chain have low unavailable rates when normalized, while several major L2s have 0% unavailable rates.
 
-### Propagation Quality by Submitter
+### Empty Rate by Submitter
 
-Beyond truly private blobs, how well do each submitter's blobs propagate through the mempool?
+Beyond completely unavailable blobs, what percentage of nodes are missing each submitter's blobs when blocks arrive?
 
 <SqlSource source="xatu" query="who_posts_private_blobs_summary" />
 
@@ -152,7 +142,7 @@ Beyond truly private blobs, how well do each submitter's blobs propagate through
     x=submitter_name
     y=empty_rate
     swapXY=true
-    title="Mempool Empty Rate by Submitter"
+    title="Empty Rate by Submitter"
     chartAreaHeight=600
     colorPalette={['#f59e0b']}
     echartsOptions={{
@@ -162,12 +152,12 @@ Beyond truly private blobs, how well do each submitter's blobs propagate through
     }}
 />
 
-The "empty rate" is the percentage of nodes that do not have a blob in their mempool when the block arrives. Higher = worse propagation.
+The "empty rate" is the average percentage of nodes that did not have a blob when the block arrived. Higher = worse propagation.
 
 <DataTable data={summary} search=true rows=20>
     <Column id="submitter_name" title="Submitter" />
     <Column id="total_blobs" title="Total Blobs" fmt="num0" />
-    <Column id="truly_private" title="Private" fmt="num0" />
+    <Column id="unavailable" title="Unavailable" fmt="num0" />
     <Column id="partial" title="Partial" fmt="num0" />
     <Column id="full_propagation" title="Full" fmt="num0" />
     <Column id="empty_rate" title="Empty Rate %" fmt="num1" />
@@ -179,10 +169,11 @@ The "empty rate" is the percentage of nodes that do not have a blob in their mem
 
 ## Takeaways
 
-- Truly private blobs are rare - only ~0.1% of all blobs never reach the public mempool
-- Base and World Chain have the most private blobs by absolute count, but this represents a tiny fraction of their volume
-- Linea has the worst propagation at 26% empty rate - their blobs often do not reach nodes before blocks arrive
-- Partial propagation is common - most blobs reach some nodes but not others, especially for high-volume L2s
-- Unknown addresses (not in our submitter mapping) account for some private blobs - worth investigating who these are
+- Completely unavailable blobs are rare: the vast majority of blobs are available to our [7870 reference nodes](https://lab.ethpandaops.io/ethereum/execution/payloads) when blocks arrive
+- These blobs may have eventually reached the public mempool, but from our nodes' perspective they were effectively private since they weren't available in time for block verification
+- **Absolute counts are misleading:** High-volume L2s may have more unavailable blobs in absolute terms, but very low rates when normalized by volume
+- **Several major L2s have 0% unavailable rates**, showing that good mempool propagation is achievable
+- Partial availability is common, with most blobs reaching some nodes but not others, especially for high-volume L2s
+
 
 </Section>

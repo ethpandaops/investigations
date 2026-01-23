@@ -1,5 +1,5 @@
--- Truly private blobs detail
--- Lists entities that submitted blobs where NO node had it in their mempool
+-- Unavailable blobs detail
+-- Lists entities that submitted blobs where NO node had it in their mempool when the block arrived
 -- Fixed time window: 2026-01-17 to 2026-01-21
 WITH getblobs_by_blob AS (
     SELECT

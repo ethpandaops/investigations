@@ -1,4 +1,4 @@
--- Overall private blob statistics
+-- Overall blob availability statistics
 -- Fixed time window: 2026-01-17 to 2026-01-21
 WITH getblobs_by_blob AS (
     SELECT
@@ -17,7 +17,7 @@ blob_status AS (
     SELECT
         versioned_hash,
         CASE
-            WHEN sum(success_nodes) = 0 THEN 'Truly Private'
+            WHEN sum(success_nodes) = 0 THEN 'Unavailable'
             WHEN sum(empty_nodes) = 0 THEN 'Full Propagation'
             ELSE 'Partial Propagation'
         END AS status
