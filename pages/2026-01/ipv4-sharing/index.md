@@ -72,15 +72,19 @@ This analysis uses data from **synthetic heartbeat** messages - periodic pings t
 
 <LineChart
     data={nodes_over_time}
-    x="day"
+    x=hour
     y="Distinct Nodes"
     sort=false
-    title="Distinct Nodes Observed per Day"
+    title="Distinct Nodes Observed per Hour"
     chartAreaHeight=300
     colorPalette={['#2563eb']}
+    xAxisLabels=true
+    xAxisTitle="Time (UTC)"
+    xLabelWrap=true
     echartsOptions={{
         title: {left: 'center'},
-        grid: {left: 80, bottom: 50, top: 60, right: 30},
+        grid: {left: 80, bottom: 80, top: 60, right: 30},
+        xAxis: {axisLabel: {interval: 23, rotate: 45}},
         yAxis: {min: 10000},
         graphic: [{
             type: 'text',
@@ -104,16 +108,20 @@ Over the week, we consistently observe around **10,000-12,000 distinct nodes** p
 
 <LineChart
     data={nodes_by_client}
-    x="day"
-    y="nodes"
-    series="client"
+    x=hour
+    y=nodes
+    series=client
     sort=false
     title="Distinct Nodes by Client Type"
     chartAreaHeight=350
     colorPalette={['#2563eb', '#dc2626', '#16a34a', '#9333ea', '#ea580c', '#0891b2', '#4f46e5', '#84cc16', '#f97316', '#6366f1']}
+    xAxisLabels=true
+    xAxisTitle="Time (UTC)"
+    xLabelWrap=true
     echartsOptions={{
         title: {left: 'center'},
-        grid: {left: 80, bottom: 50, top: 60, right: 120},
+        grid: {left: 80, bottom: 80, top: 60, right: 120},
+        xAxis: {axisLabel: {interval: 23, rotate: 45}},
         legend: {show: true, right: 10, orient: 'vertical', top: 'center'},
         graphic: [{
             type: 'text',
@@ -129,7 +137,7 @@ Over the week, we consistently observe around **10,000-12,000 distinct nodes** p
     }}
 />
 
-**Lighthouse** dominates with ~5,800 nodes, followed by **Prysm** (~2,500), **Nimbus** (~1,250), and **Teku** (~900).
+**Lighthouse** dominates with ~7,100 nodes, followed by **Prysm** (~3,900), **Nimbus** (~1,600), and **Teku** (~1,300).
 
 ### How are concurrent peer_ids distributed across IPs?
 
