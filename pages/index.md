@@ -9,7 +9,7 @@ h1:first-of-type { display: none !important; }
 </style>
 
 <div style="display: flex; align-items: center; gap: 3rem; margin: 1rem 0 2.5rem 0; padding: 2.5rem 0;">
-    <img src="/investigations/panda.png" alt="Investigation Panda" style="width: 200px; height: auto; flex-shrink: 0; filter: drop-shadow(4px 6px 12px rgba(61, 58, 42, 0.2));" />
+    <img src="/panda.png" alt="Investigation Panda" style="width: 200px; height: auto; flex-shrink: 0; filter: drop-shadow(4px 6px 12px rgba(61, 58, 42, 0.2));" />
     <div>
         <div style="font-family: 'Courier New', monospace; font-size: 2.2rem; font-weight: 700; letter-spacing: 0.15em; color: #3d3a2a; margin-bottom: 0.5rem; text-shadow: 1px 1px 0 rgba(255,255,255,0.8);">
             CASE FILES
@@ -25,22 +25,22 @@ h1:first-of-type { display: none !important; }
 </div>
 
 <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 1.25rem;">
-    <a href="/investigations/2026-01/timing-games" style="display: block; padding: 1.5rem 1.75rem; background: linear-gradient(135deg, rgba(248,247,243,0.9) 0%, rgba(244,242,235,1) 100%); border-left: 4px solid #bb5a38; text-decoration: none; transition: all 0.15s ease-out; box-shadow: 0 2px 8px -2px rgba(61,58,42,0.08);">
+    <a href="/2026-01/timing-games" style="display: block; padding: 1.5rem 1.75rem; background: linear-gradient(135deg, rgba(248,247,243,0.9) 0%, rgba(244,242,235,1) 100%); border-left: 4px solid #bb5a38; text-decoration: none; transition: all 0.15s ease-out; box-shadow: 0 2px 8px -2px rgba(61,58,42,0.08);">
         <div style="font-family: ui-monospace, monospace; font-size: 0.6rem; letter-spacing: 0.12em; color: #bb5a38; text-transform: uppercase; margin-bottom: 0.5rem; font-weight: 600;">Latest Case</div>
         <div style="color: #3d3a2a; font-weight: 700; font-size: 1.1rem; margin-bottom: 0.4rem;">Timing Games</div>
         <div style="font-size: 0.85rem; color: #6b6560; line-height: 1.5;">Which entities delay their blocks to extract more MEV?</div>
     </a>
-    <a href="/investigations/2026-01/private-blob-submitters" style="display: block; padding: 1.5rem 1.75rem; background: rgba(248,247,243,0.7); border-left: 4px solid #d4a090; text-decoration: none; transition: all 0.15s ease-out;">
+    <a href="/2026-01/private-blob-submitters" style="display: block; padding: 1.5rem 1.75rem; background: rgba(248,247,243,0.7); border-left: 4px solid #d4a090; text-decoration: none; transition: all 0.15s ease-out;">
         <div style="font-family: ui-monospace, monospace; font-size: 0.6rem; letter-spacing: 0.12em; color: #9a958d; text-transform: uppercase; margin-bottom: 0.5rem;">Jan 21</div>
         <div style="color: #3d3a2a; font-weight: 700; font-size: 1.1rem; margin-bottom: 0.4rem;">Private Blob Submitters</div>
         <div style="font-size: 0.85rem; color: #6b6560; line-height: 1.5;">Who posts blobs that bypass the public mempool?</div>
     </a>
-    <a href="/investigations/2026-01/head-accuracy-by-entity" style="display: block; padding: 1.5rem 1.75rem; background: rgba(248,247,243,0.5); border-left: 4px solid #ddd9d1; text-decoration: none; transition: all 0.15s ease-out;">
+    <a href="/2026-01/head-accuracy-by-entity" style="display: block; padding: 1.5rem 1.75rem; background: rgba(248,247,243,0.5); border-left: 4px solid #ddd9d1; text-decoration: none; transition: all 0.15s ease-out;">
         <div style="font-family: ui-monospace, monospace; font-size: 0.6rem; letter-spacing: 0.12em; color: #9a958d; text-transform: uppercase; margin-bottom: 0.5rem;">Jan 20</div>
         <div style="color: #3d3a2a; font-weight: 700; font-size: 1.1rem; margin-bottom: 0.4rem;">Head Vote Accuracy</div>
         <div style="font-size: 0.85rem; color: #6b6560; line-height: 1.5;">How often do validators correctly vote for the chain head?</div>
     </a>
-    <a href="/investigations/2026-01/snooper-overhead" style="display: block; padding: 1.5rem 1.75rem; background: rgba(248,247,243,0.5); border-left: 4px solid #ddd9d1; text-decoration: none; transition: all 0.15s ease-out;">
+    <a href="/2026-01/snooper-overhead" style="display: block; padding: 1.5rem 1.75rem; background: rgba(248,247,243,0.5); border-left: 4px solid #ddd9d1; text-decoration: none; transition: all 0.15s ease-out;">
         <div style="font-family: ui-monospace, monospace; font-size: 0.6rem; letter-spacing: 0.12em; color: #9a958d; text-transform: uppercase; margin-bottom: 0.5rem;">Jan 16</div>
         <div style="color: #3d3a2a; font-weight: 700; font-size: 1.1rem; margin-bottom: 0.4rem;">RPC Snooper Overhead</div>
         <div style="font-size: 0.85rem; color: #6b6560; line-height: 1.5;">Measuring latency impact of rpc-snooper on Engine API.</div>

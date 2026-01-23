@@ -91,7 +91,7 @@
 	}
 
 	/* Logo link container - the agency sign */
-	:global(header a[href="/investigations/"]) {
+	:global(header a[href="/"]) {
 		display: flex !important;
 		align-items: center !important;
 		gap: 1rem !important;
@@ -100,20 +100,20 @@
 	}
 
 	/* Detective panda - THE HERO */
-	:global(header a[href="/investigations/"] img) {
+	:global(header a[href="/"] img) {
 		height: 3.5rem !important;
 		width: auto !important;
 		filter: drop-shadow(2px 3px 4px rgba(61, 58, 42, 0.2)) !important;
 		transition: transform 0.2s ease-out, filter 0.2s ease-out !important;
 	}
 
-	:global(header a[href="/investigations/"]:hover img) {
+	:global(header a[href="/"]:hover img) {
 		transform: scale(1.03) !important;
 		filter: drop-shadow(3px 4px 6px rgba(61, 58, 42, 0.25)) !important;
 	}
 
 	/* INVESTIGATIONS - etched glass typography */
-	:global(header a[href="/investigations/"]::after) {
+	:global(header a[href="/"]::after) {
 		content: "INVESTIGATIONS" !important;
 		font-family: "Courier New", Courier, monospace !important;
 		font-weight: 700 !important;
@@ -130,7 +130,7 @@
 	}
 
 	/* ethPandaOps credit - subtle agency watermark */
-	:global(header a[href="/investigations/"]::before) {
+	:global(header a[href="/"]::before) {
 		content: "ethPandaOps" !important;
 		font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, monospace !important;
 		font-weight: 500 !important;
@@ -288,14 +288,14 @@
 	}
 
 	/* Header text - light for dark mode */
-	:global([data-theme="dark"] header a[href="/investigations/"]::after) {
+	:global([data-theme="dark"] header a[href="/"]::after) {
 		color: #e8e5dc !important;
 		text-shadow:
 			1px 1px 0 rgba(0,0,0,0.5),
 			-0.5px -0.5px 0 rgba(255, 255, 255, 0.05) !important;
 	}
 
-	:global([data-theme="dark"] header a[href="/investigations/"]::before) {
+	:global([data-theme="dark"] header a[href="/"]::before) {
 		color: #6b6560 !important;
 	}
 
@@ -345,20 +345,20 @@
 	}
 
 	/* Landing page cards - dark mode */
-	:global([data-theme="dark"] article a[href*="/investigations/"]) {
+	:global([data-theme="dark"] article a[href*="/2026-"]) {
 		background: linear-gradient(135deg, rgba(30, 28, 26, 0.9) 0%, rgba(26, 25, 24, 1) 100%) !important;
 		border-left-color: #bb5a38 !important;
 	}
 
-	:global([data-theme="dark"] article a[href*="/investigations/"] > div:first-child) {
+	:global([data-theme="dark"] article a[href*="/2026-"] > div:first-child) {
 		color: #bb5a38 !important;
 	}
 
-	:global([data-theme="dark"] article a[href*="/investigations/"] > div:nth-child(2)) {
+	:global([data-theme="dark"] article a[href*="/2026-"] > div:nth-child(2)) {
 		color: #e8e5dc !important;
 	}
 
-	:global([data-theme="dark"] article a[href*="/investigations/"] > div:nth-child(3)) {
+	:global([data-theme="dark"] article a[href*="/2026-"] > div:nth-child(3)) {
 		color: #9a958d !important;
 	}
 
