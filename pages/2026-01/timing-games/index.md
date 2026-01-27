@@ -2,7 +2,7 @@
 title: Timing Games
 sidebar_position: 1
 description: Which entities delay their blocks to extract more MEV? A week of timing data analyzed.
-date: 2026-01-20
+date: 2026-01-20T02:11:41Z
 author: samcm
 tags:
   - timing-games
@@ -18,7 +18,7 @@ tags:
 </script>
 
 <PageMeta
-    date="2026-01-20"
+    date="2026-01-20T02:11:41Z"
     author="samcm"
     tags={["timing-games", "mev", "block-timing", "validators"]}
     networks={["Ethereum Mainnet"]}

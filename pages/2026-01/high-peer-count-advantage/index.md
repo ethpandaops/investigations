@@ -2,7 +2,7 @@
 title: High Peer Count Blocks
 sidebar_position: 6
 description: Investigating whether a node with 6k+ peers sees blocks faster than the rest of the network
-date: 2026-01-22
+date: 2026-01-22T01:21:02Z
 author: samcm
 tags:
   - block-propagation
@@ -18,7 +18,7 @@ tags:
 </script>
 
 <PageMeta
-    date="2026-01-22"
+    date="2026-01-22T01:21:02Z"
     author="samcm"
     tags={["block-propagation", "peer-count", "network-performance", "xatu"]}
     networks={["Ethereum Mainnet"]}

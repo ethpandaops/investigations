@@ -23,11 +23,19 @@
         if (!dateStr) return '';
         try {
             const d = new Date(dateStr);
-            return d.toLocaleDateString('en-US', {
+            const hasTime = d.getUTCHours() !== 0 || d.getUTCMinutes() !== 0 || d.getUTCSeconds() !== 0;
+            const datePart = d.toLocaleDateString('en-US', {
                 year: 'numeric',
                 month: 'long',
                 day: 'numeric'
             });
+            if (!hasTime) return datePart;
+            const timePart = d.toLocaleTimeString('en-US', {
+                hour: '2-digit',
+                minute: '2-digit',
+                timeZoneName: 'short'
+            });
+            return `${datePart} at ${timePart}`;
         } catch (e) {
             return dateStr;
         }

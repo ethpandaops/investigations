@@ -1,7 +1,7 @@
 ---
 title: Nethermind
 description: debug_traceTransaction quirks report for Nethermind
-date: 2026-01-21
+date: 2026-01-21T07:48:24Z
 author: savid
 tags:
   - trace
@@ -15,7 +15,7 @@ tags:
 </script>
 
 <PageMeta
-    date="2026-01-21"
+    date="2026-01-21T07:48:24Z"
     author="savid"
     tags={["trace", "debug", "evm", "nethermind"]}
 />

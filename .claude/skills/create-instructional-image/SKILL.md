@@ -52,7 +52,7 @@ A core building block for Ethereum consensus diagrams. Used to illustrate block 
 - **Parent reference arrows point backwards** (right-to-left): Every block references its parent. Arrows go FROM child BACK TO parent. Use solid charcoal arrows for canonical references.
 
 ### Showing Forks
-When a block builds on a non-canonical parent (e.g., a stale parent reference):
+When a block builds on a non-canonical parent:
 - Drop the forked block **below** the main timeline at its correct slot position. This visually separates it from the canonical chain while preserving its time position.
 - Use a **red dashed arrow** for the stale/non-canonical parent reference (pointing backwards to the old parent).
 - The canonical chain continues above the timeline, skipping over the forked slot.

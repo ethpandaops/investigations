@@ -2,7 +2,7 @@
 title: Who Posts Unavailable Blobs?
 sidebar_position: 5
 description: Identifying which L2s and entities submit blobs that aren't available to nodes when blocks arrive
-date: 2026-01-21
+date: 2026-01-21T04:18:27Z
 author: samcm
 tags:
   - blobs
@@ -18,7 +18,7 @@ tags:
 </script>
 
 <PageMeta
-    date="2026-01-21"
+    date="2026-01-21T04:18:27Z"
     author="samcm"
     tags={["blobs", "mempool", "l2", "data-availability"]}
     networks={["Ethereum Mainnet"]}

@@ -44,7 +44,7 @@ Investigations from Month Year.
 title: {Title}
 sidebar_position: {N}
 description: {Brief description}
-date: {YYYY-MM-DD}
+date: {YYYY-MM-DDTHH:MM:SSZ}
 author: {username}
 tags:
   - tag1

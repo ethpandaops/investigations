@@ -2,7 +2,7 @@
 title: Who Posts Empty Blobs?
 sidebar_position: 9
 description: Identifying which entities submit blob transactions containing empty (zero-data) blobs on Ethereum mainnet
-date: 2026-01-27
+date: 2026-01-27T04:11:39Z
 author: samcm
 tags:
   - blobs
@@ -162,7 +162,7 @@ tags:
 </script>
 
 <PageMeta
-    date="2026-01-27"
+    date="2026-01-27T04:11:39Z"
     author="samcm"
     tags={["blobs", "data-availability", "aztec"]}
     networks={["Ethereum Mainnet"]}

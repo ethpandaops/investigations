@@ -2,7 +2,7 @@
 title: Stale Parent Block Proposals
 sidebar_position: 12
 description: Analyzing how often Ethereum proposers build on non-direct parents, the resulting orphan rates, and which staking entities are most affected
-date: 2026-01-27
+date: 2026-01-27T04:11:39Z
 author: samcm
 tags:
   - block-proposals
@@ -17,12 +17,15 @@ tags:
     import SqlSource from '$lib/SqlSource.svelte';
     import { ECharts } from '@evidence-dev/core-components';
 
+    // Responsive chart layout detection
+    const mobile = typeof window !== 'undefined' && window.innerWidth < 640;
+
     // Chart 1: Parent distance distribution with orphan rate overlay
     $: distributionConfig = (() => {
         if (!distribution || distribution.length === 0) return {};
 
         return {
-            title: { text: 'Parent Distance Distribution (All Proposed Blocks)', left: 'center' },
+            title: { text: 'Parent Distance Distribution (All Proposed Blocks)', left: 'center', textStyle: { fontSize: mobile ? 13 : 18 } },
             tooltip: {
                 trigger: 'axis',
                 formatter: (params) => {
@@ -37,8 +40,12 @@ tags:
                     return result;
                 }
             },
-            legend: { data: ['Total Blocks', 'Orphan Rate'], right: 10, orient: 'vertical', top: 'center' },
-            grid: { left: 80, right: 140, bottom: 60, top: 60 },
+            legend: mobile
+                ? { data: ['Total Blocks', 'Orphan Rate'], bottom: 0, orient: 'horizontal' }
+                : { data: ['Total Blocks', 'Orphan Rate'], right: 10, orient: 'vertical', top: 'center' },
+            grid: mobile
+                ? { left: 50, right: 50, bottom: 60, top: 50 }
+                : { left: 80, right: 140, bottom: 60, top: 60 },
             xAxis: {
                 type: 'category',
                 data: distribution.map(d => String(d.parent_distance)),
@@ -49,14 +56,14 @@ tags:
             yAxis: [
                 {
                     type: 'log',
-                    name: 'Block Count (log scale)',
+                    name: mobile ? '' : 'Block Count (log scale)',
                     nameLocation: 'center',
                     nameGap: 60,
                     nameRotate: 90
                 },
                 {
                     type: 'value',
-                    name: 'Orphan Rate (%)',
+                    name: mobile ? '' : 'Orphan Rate (%)',
                     nameLocation: 'center',
                     nameGap: 40,
                     nameRotate: 270,
@@ -96,29 +103,33 @@ tags:
         const orphanedStale = daily.map(d => d.orphaned_truly_stale);
 
         return {
-            title: { text: 'Daily Truly Stale Parent Rate', left: 'center' },
+            title: { text: 'Daily Truly Stale Parent Rate', left: 'center', textStyle: { fontSize: mobile ? 13 : 18 } },
             tooltip: { trigger: 'axis' },
-            legend: { data: ['Orphaned (Stale)', 'Truly Stale %'], right: 10, orient: 'vertical', top: 'center' },
-            grid: { left: 80, right: 180, bottom: 80, top: 60 },
+            legend: mobile
+                ? { data: ['Orphaned (Stale)', 'Truly Stale %'], bottom: 0, orient: 'horizontal' }
+                : { data: ['Orphaned (Stale)', 'Truly Stale %'], right: 10, orient: 'vertical', top: 'center' },
+            grid: mobile
+                ? { left: 40, right: 40, bottom: 70, top: 50 }
+                : { left: 80, right: 180, bottom: 80, top: 60 },
             xAxis: {
                 type: 'category',
                 data: days,
-                axisLabel: { rotate: 45, fontSize: 10, interval: 6 },
+                axisLabel: { rotate: 45, fontSize: mobile ? 9 : 10, interval: mobile ? 13 : 6 },
                 name: 'Date',
                 nameLocation: 'center',
-                nameGap: 60
+                nameGap: mobile ? 50 : 60
             },
             yAxis: [
                 {
                     type: 'value',
-                    name: 'Block Count',
+                    name: mobile ? '' : 'Block Count',
                     nameLocation: 'center',
                     nameGap: 50,
                     nameRotate: 90
                 },
                 {
                     type: 'value',
-                    name: 'Truly Stale %',
+                    name: mobile ? '' : 'Truly Stale %',
                     nameLocation: 'center',
                     nameGap: 40,
                     nameRotate: 270,
@@ -166,7 +177,7 @@ tags:
         };
 
         return {
-            title: { text: 'Truly Stale Parent Rate by Entity Group', left: 'center' },
+            title: { text: 'Truly Stale Parent Rate by Entity Group', left: 'center', textStyle: { fontSize: mobile ? 13 : 18 } },
             tooltip: {
                 trigger: 'axis',
                 formatter: (params) => {
@@ -175,18 +186,20 @@ tags:
                     return `${d.name}<br/>Truly Stale Rate: ${d.value}%<br/>Truly Stale Blocks: ${row.truly_stale_blocks} (${row.orphaned_truly_stale} orphaned)<br/>Total Blocks: ${row.total_blocks.toLocaleString()}<br/>p50 Distance: ${row.p50_distance}<br/>p95 Distance: ${row.p95_distance}<br/>Max Distance: ${row.max_distance}`;
                 }
             },
-            grid: { left: 160, right: 40, bottom: 60, top: 60 },
+            grid: mobile
+                ? { left: 100, right: 10, bottom: 30, top: 35 }
+                : { left: 160, right: 40, bottom: 60, top: 60 },
             xAxis: {
                 type: 'value',
-                name: 'Truly Stale Parent Rate (%)',
+                name: mobile ? '' : 'Truly Stale Parent Rate (%)',
                 nameLocation: 'center',
                 nameGap: 35,
-                axisLabel: { formatter: '{value}%' }
+                axisLabel: { formatter: '{value}%', fontSize: mobile ? 10 : 12 }
             },
             yAxis: {
                 type: 'category',
                 data: entities,
-                axisLabel: { fontSize: 12 }
+                axisLabel: { fontSize: mobile ? 10 : 12 }
             },
             series: [{
                 type: 'bar',
@@ -194,11 +207,12 @@ tags:
                     value: v,
                     itemStyle: { color: colorMap[entities[i]] || '#6b7280' }
                 })),
-                barMaxWidth: 40,
+                barMaxWidth: mobile ? 30 : 40,
                 label: {
                     show: true,
                     position: 'right',
-                    formatter: '{c}%'
+                    formatter: '{c}%',
+                    fontSize: mobile ? 10 : 12
                 }
             }]
         };
@@ -227,7 +241,7 @@ tags:
         const color = colorMap[selectedEntity] || '#6b7280';
 
         return {
-            title: { text: `Parent Distance Distribution: ${selectedEntity}`, left: 'center' },
+            title: { text: `Parent Distance Distribution: ${selectedEntity}`, left: 'center', textStyle: { fontSize: mobile ? 13 : 18 } },
             tooltip: {
                 trigger: 'axis',
                 formatter: (params) => {
@@ -240,8 +254,12 @@ tags:
                     return result;
                 }
             },
-            legend: { data: ['Total Blocks', 'Truly Stale'], right: 10, orient: 'vertical', top: 'center' },
-            grid: { left: 80, right: 140, bottom: 60, top: 60 },
+            legend: mobile
+                ? { data: ['Total Blocks', 'Truly Stale'], bottom: 0, orient: 'horizontal' }
+                : { data: ['Total Blocks', 'Truly Stale'], right: 10, orient: 'vertical', top: 'center' },
+            grid: mobile
+                ? { left: 50, right: 20, bottom: 60, top: 50 }
+                : { left: 80, right: 140, bottom: 60, top: 60 },
             xAxis: {
                 type: 'category',
                 data: filtered.map(d => String(d.parent_distance)),
@@ -251,7 +269,7 @@ tags:
             },
             yAxis: {
                 type: 'log',
-                name: 'Block Count (log scale)',
+                name: mobile ? '' : 'Block Count (log scale)',
                 nameLocation: 'center',
                 nameGap: 60,
                 nameRotate: 90
@@ -302,12 +320,12 @@ tags:
             itemStyle: { color: colorMap[name] },
             lineStyle: { color: colorMap[name], width: 2 },
             symbol: 'circle',
-            symbolSize: 6,
+            symbolSize: mobile ? 4 : 6,
             connectNulls: true
         }));
 
         return {
-            title: { text: 'Weekly Truly Stale Parent Rate by Entity Group', left: 'center' },
+            title: { text: 'Weekly Truly Stale Parent Rate by Entity Group', left: 'center', textStyle: { fontSize: mobile ? 12 : 18 } },
             tooltip: {
                 trigger: 'axis',
                 formatter: (params) => {
@@ -320,19 +338,23 @@ tags:
                     return result;
                 }
             },
-            legend: { data: groups, right: 10, orient: 'vertical', top: 'center' },
-            grid: { left: 80, right: 170, bottom: 80, top: 60 },
+            legend: mobile
+                ? { data: groups, bottom: 0, orient: 'horizontal', textStyle: { fontSize: 10 } }
+                : { data: groups, right: 10, orient: 'vertical', top: 'center' },
+            grid: mobile
+                ? { left: 40, right: 20, bottom: 80, top: 50 }
+                : { left: 80, right: 170, bottom: 80, top: 60 },
             xAxis: {
                 type: 'category',
                 data: weeks,
-                axisLabel: { rotate: 45, fontSize: 10 },
+                axisLabel: { rotate: 45, fontSize: mobile ? 9 : 10 },
                 name: 'Week',
                 nameLocation: 'center',
-                nameGap: 60
+                nameGap: mobile ? 50 : 60
             },
             yAxis: {
                 type: 'value',
-                name: 'Truly Stale Parent Rate (%)',
+                name: mobile ? '' : 'Truly Stale Parent Rate (%)',
                 nameLocation: 'center',
                 nameGap: 50,
                 nameRotate: 90,
@@ -345,7 +367,7 @@ tags:
 </script>
 
 <PageMeta
-    date="2026-01-27"
+    date="2026-01-27T04:11:39Z"
     author="samcm"
     tags={["block-proposals", "parent-distance", "staking-entities", "network-health"]}
     networks={["Ethereum Mainnet"]}
@@ -441,7 +463,7 @@ The stacked bars show canonical truly stale blocks (blue) and orphaned truly sta
 
 <SqlSource source="xatu_cbt" query="parent_distance_entity_summary" />
 
-<ECharts config={entitySummaryConfig} height="400px" />
+<ECharts config={entitySummaryConfig} height={mobile ? "280px" : "400px"} />
 
 <DataTable data={entity_summary} rows=10>
     <Column id="entity_group" title="Entity Group" />

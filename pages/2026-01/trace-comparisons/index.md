@@ -2,7 +2,7 @@
 title: Ethereum Client Trace Comparisons
 sidebar_position: 6
 description: Comparing debug_traceTransaction outputs across Ethereum clients
-date: 2026-01-21
+date: 2026-01-21T07:48:24Z
 author: savid
 tags:
   - trace
@@ -21,7 +21,7 @@ tags:
 </script>
 
 <PageMeta
-    date="2026-01-21"
+    date="2026-01-21T07:48:24Z"
     author="savid"
     tags={["trace", "debug", "evm", "clients", "geth", "besu", "reth", "nethermind", "erigon"]}
 />

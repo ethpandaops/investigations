@@ -2,7 +2,7 @@
 title: Blob Mempool Propagation and Head Timing Impact
 sidebar_position: 4
 description: Analyzing how blob mempool propagation affects engine_getBlobsV2 success rates and per-node head timing
-date: 2026-01-21
+date: 2026-01-21T04:18:27Z
 author: samcm
 hidden: true
 tags:
@@ -22,7 +22,7 @@ tags:
 </script>
 
 <PageMeta
-    date="2026-01-21"
+    date="2026-01-21T04:18:27Z"
     author="samcm"
     tags={["blobs", "mev", "engine-api", "get-blobs", "data-availability", "peerDAS"]}
     networks={["Ethereum Mainnet"]}

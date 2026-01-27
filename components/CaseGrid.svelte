@@ -5,11 +5,12 @@
 
 	function formatDate(dateStr) {
 		if (!dateStr) return '';
-		const parts = String(dateStr).split('-');
-		if (parts.length < 3) return String(dateStr);
-		const month = parseInt(parts[1], 10) - 1;
-		const day = parseInt(parts[2], 10);
-		return `${MONTHS[month]} ${day}`;
+		try {
+			const d = new Date(dateStr);
+			return `${MONTHS[d.getUTCMonth()]} ${d.getUTCDate()}`;
+		} catch (e) {
+			return String(dateStr);
+		}
 	}
 
 	function cardClass(index) {

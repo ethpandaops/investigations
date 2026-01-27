@@ -571,6 +571,22 @@
 			-webkit-overflow-scrolling: touch !important;
 		}
 
+		/* Scroll indicator: fade overlay on right edge hints at more content */
+		:global(.table-container) {
+			position: relative !important;
+		}
+		:global(.table-container::after) {
+			content: "" !important;
+			position: absolute !important;
+			top: 0 !important;
+			right: 0 !important;
+			bottom: 0 !important;
+			width: 32px !important;
+			background: linear-gradient(to right, transparent, rgba(245, 243, 237, 0.95)) !important;
+			pointer-events: none !important;
+			z-index: 10 !important;
+		}
+
 		/* Regular markdown tables - horizontal scroll */
 		:global(.markdown table),
 		:global(article > table) {

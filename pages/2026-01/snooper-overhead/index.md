@@ -1,8 +1,8 @@
 ---
-title: RPC Snooper Overhead
+title: Snooper Overhead on get_blobs
 sidebar_position: 3
-description: Measuring the latency impact of deploying rpc-snooper between CL and EL on 7870 reference nodes
-date: 2026-01-16
+description: Measuring the latency impact of rpc-snooper on get_blobs calls between CL and EL on 7870 reference nodes
+date: 2026-01-16T00:00:00Z
 author: samcm
 tags:
   - snooper
@@ -19,7 +19,7 @@ tags:
 </script>
 
 <PageMeta
-    date="2026-01-16"
+    date="2026-01-16T00:00:00Z"
     author="samcm"
     tags={["snooper", "engine-api", "get-blobs", "latency", "7870"]}
     networks={["Ethereum Mainnet"]}
@@ -43,7 +43,7 @@ select * from xatu.snooper_overhead_by_blobs
 
 ## Question
 
-What is the latency impact of deploying rpc-snooper between the consensus layer and execution layer?
+What is the latency impact of rpc-snooper on `get_blobs` calls between the consensus layer and execution layer?
 
 </Section>
 

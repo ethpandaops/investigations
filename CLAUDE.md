@@ -12,7 +12,7 @@ All pages should include metadata in the frontmatter. Here's the standard schema
 title: Page Title
 sidebar_position: 1
 description: Brief description of the page
-date: 2025-01-20
+date: 2025-01-20T14:30:00Z
 author: samcm
 tags:
   - tag1
@@ -28,7 +28,7 @@ tags:
 ### Optional Fields
 
 - `sidebar_position`: Order in the sidebar navigation (lower = higher)
-- `date`: Publication/update date in YYYY-MM-DD format
+- `date`: Publication datetime in ISO 8601 format (YYYY-MM-DDTHH:MM:SSZ). Pages are sorted by this datetime descending.
 - `author`: Author username (see supported authors below)
 - `tags`: Array of relevant tags for categorization
 
@@ -58,7 +58,7 @@ Use the `PageMeta` component to display metadata. For investigations, also inclu
 </script>
 
 <PageMeta
-    date="2025-01-20"
+    date="2025-01-20T14:30:00Z"
     author="samcm"
     tags={["tag1", "tag2"]}
     networks={["Ethereum Mainnet"]}

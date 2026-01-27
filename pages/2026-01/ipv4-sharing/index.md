@@ -2,7 +2,7 @@
 title: IPv4 Sharing on Mainnet
 sidebar_position: 8
 description: Analyzing how many peer_ids and clients share the same IPv4 address on mainnet
-date: 2026-01-23
+date: 2026-01-23T06:01:12Z
 author: samcm
 tags:
   - p2p
@@ -121,7 +121,7 @@ tags:
 </script>
 
 <PageMeta
-    date="2026-01-23"
+    date="2026-01-23T06:01:12Z"
     author="samcm"
     tags={["p2p", "libp2p", "network", "synthetic-heartbeat"]}
     networks={["Ethereum Mainnet"]}

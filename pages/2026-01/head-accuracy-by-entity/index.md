@@ -2,7 +2,7 @@
 title: Head Vote Accuracy by Entity Type
 sidebar_position: 2
 description: Comparing head vote accuracy across Lido CSM, Rocketpool, Solo Stakers, and the rest of the network
-date: 2026-01-20
+date: 2026-01-20T05:43:25Z
 author: samcm
 hidden: true
 tags:
@@ -20,7 +20,7 @@ tags:
 </script>
 
 <PageMeta
-    date="2026-01-20"
+    date="2026-01-20T05:43:25Z"
     author="samcm"
     tags={["head-votes", "attestations", "validators", "lido-csm", "rocketpool"]}
     networks={["Ethereum Mainnet"]}

@@ -2,7 +2,7 @@
 title: "Orphaned Slot 13505944"
 sidebar_position: 11
 description: A block built on a parent 19 slots behind the chain tip was orphaned with 0.46% head accuracy because fork choice could never prefer such a stale fork.
-date: 2026-01-27
+date: 2026-01-27T04:11:39Z
 author: samcm
 tags:
   - orphaned-block
@@ -61,7 +61,7 @@ tags:
 </script>
 
 <PageMeta
-    date="2026-01-27"
+    date="2026-01-27T04:11:39Z"
     author="samcm"
     tags={["orphaned-block", "block-timing", "execution-payload", "head-votes"]}
     networks={["Ethereum Mainnet"]}
