@@ -405,6 +405,10 @@ A parent distance of 2 is usually benign: the previous slot was simply missed, a
 
 **Methodology**: For each block in `fct_block` (both canonical and orphaned), we self-join on `parent_root = block_root` to find the parent block's slot, then compute `slot - parent_slot` as the parent distance. To distinguish truly stale blocks from benign missed-slot cases, we check whether any canonical blocks exist between the parent slot and the proposed slot. If none exist, all intervening slots were missed and the proposer built correctly. If canonical blocks exist in between, the proposer was genuinely behind.
 
+<img src="/stale-parent-blocks-explainer.jpg" alt="Truly Stale Parent — Slot 4 builds on Slot 1 instead of the canonical chain" style="max-width: 600px; width: 100%; display: block; margin: 0 auto;" />
+
+*The block proposed in Slot 4 built on Slot 1 instead of Slot 3, giving it a parent distance of 3. Since canonical blocks exist in Slots 2 and 3, this is a truly stale parent reference.*
+
 </Section>
 
 <Section type="investigation">
