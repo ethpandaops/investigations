@@ -93,13 +93,12 @@ tags:
 
         const days = daily.map(d => d.day);
         const stalePct = daily.map(d => d.truly_stale_pct);
-        const staleCount = daily.map(d => d.truly_stale_blocks);
         const orphanedStale = daily.map(d => d.orphaned_truly_stale);
 
         return {
             title: { text: 'Daily Truly Stale Parent Rate', left: 'center' },
             tooltip: { trigger: 'axis' },
-            legend: { data: ['Canonical (Stale)', 'Orphaned (Stale)', 'Truly Stale %'], right: 10, orient: 'vertical', top: 'center' },
+            legend: { data: ['Orphaned (Stale)', 'Truly Stale %'], right: 10, orient: 'vertical', top: 'center' },
             grid: { left: 80, right: 180, bottom: 80, top: 60 },
             xAxis: {
                 type: 'category',
@@ -129,17 +128,8 @@ tags:
             ],
             series: [
                 {
-                    name: 'Canonical (Stale)',
-                    type: 'bar',
-                    stack: 'blocks',
-                    data: staleCount.map((v, i) => v - orphanedStale[i]),
-                    itemStyle: { color: '#93c5fd' },
-                    barMaxWidth: 8
-                },
-                {
                     name: 'Orphaned (Stale)',
                     type: 'bar',
-                    stack: 'blocks',
                     data: orphanedStale,
                     itemStyle: { color: '#fca5a5' },
                     barMaxWidth: 8
