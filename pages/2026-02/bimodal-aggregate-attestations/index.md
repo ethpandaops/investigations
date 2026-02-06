@@ -474,6 +474,36 @@ Peers caught behind are almost completely silent: **96.5%** sent us nothing at a
 
 At first glance, the low tail rate from behind peers (0.7%) might seem to contradict the idea that slow block processing causes the tail. If these peers are the source of the problem, why aren't *they* the ones sending us tail messages? Is there a race condition at play - and if so, how does the re-broadcast actually propagate through the network?
 
+### When Profiling Slow Nodes
+
+What does "behind" actually mean? To find out, we classified 2,086 Prysm peers by how often they were caught behind during the 15-minute sample:
+
+| Category | Peers | % | Avg behind rate |
+|---|---|---|---|
+| Rarely behind (`<` 10% of slots) | 1,948 | 93.4% | 0.1% |
+| Sometimes behind (10-40%) | 18 | 0.9% | 19.8% |
+| Often behind (40-80%) | 5 | 0.2% | 63.0% |
+| Always behind (`>` 80%) | 115 | 5.5% | 99.9% |
+
+The distribution is sharply bimodal: a peer is either keeping up or stuck. There's almost no middle ground. Looking at *how far* behind the stuck peers are reveals two distinct populations:
+
+- **~750 observations, 1-3 slots behind**: Peers that received the block but haven't finished processing it yet. 95.9% recover within 36 seconds. These are the "slow processors" that drive the rebroadcast tail.
+- **~51 peers, hundreds to thousands of slots behind**: Stalled syncs or abandoned nodes. Median deficit of ~84,848 slots (~12 days). These are broken, not slow.
+
+Block delivery itself is healthy: p50 = 1.9s, p99.9 = 3.8s, with 99.94% of blocks arriving within 4s. The problem is block *processing* latency, not missing blocks.
+
+Prysm version also matters:
+
+| Version | Peers | Behind % | "Stuck" peers (days behind) |
+|---|---|---|---|
+| v7.0.0 | 369 | **16.5%** | 15 (~51 days avg) |
+| v7.1.1 | 222 | 9.9% | 10 (~19 days avg) |
+| v7.1.0 | 138 | 9.4% | 4 (~27 days avg) |
+| v7.0.1 | 228 | 7.5% | 3 (~17 days avg) |
+| v7.1.2 | 904 | 5.9% | 19 (~13 days avg) |
+
+v7.0.0 stands out with nearly 3x the behind rate of v7.1.2 (latest stable). Its stuck peers average 51 days behind, suggesting many of these are unmaintained deployments. Even on v7.1.2, ~2% of peers are deeply stuck - likely operational issues (resource constraints, interrupted syncs) rather than a client bug.
+
 ### Analysis
 
 #### Prysm: Possible Pending Queue Re-broadcast
