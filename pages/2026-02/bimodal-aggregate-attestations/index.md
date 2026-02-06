@@ -353,6 +353,104 @@ tags:
             ]
         };
     })();
+
+    // Chart 7: Slow node behind-rate distribution (message volume)
+    $: slowNodeDistConfig = (() => {
+        if (!slow_node_distribution || slow_node_distribution.length === 0 || slow_node_distribution[0].category == null) return {};
+        return {
+            title: { text: 'Aggregate Messages by Peer Behind Rate', left: 'center', textStyle: { fontSize: 13 } },
+            tooltip: {
+                trigger: 'axis',
+                axisPointer: { type: 'shadow' },
+                formatter: (params) => {
+                    const idx = params[0].dataIndex;
+                    const row = slow_node_distribution[idx];
+                    const peak = params.find(p => p.seriesName === 'Peak (4-11s)');
+                    const tail = params.find(p => p.seriesName === 'Tail (12-20s)');
+                    const p = Number(peak?.value || 0);
+                    const t = Number(tail?.value || 0);
+                    const total = p + t;
+                    const tailPct = total > 0 ? ((t / total) * 100).toFixed(1) : '0';
+                    return `<b>${row.category}</b> (${Number(row.peer_count).toLocaleString()} peers)<br/>` +
+                        `Peak: ${p.toLocaleString()}<br/>` +
+                        `Tail: ${t.toLocaleString()} (${tailPct}%)<br/>` +
+                        `Total: ${total.toLocaleString()}`;
+                }
+            },
+            legend: { data: ['Peak (4-11s)', 'Tail (12-20s)'], top: 30, textStyle: { fontSize: 11 } },
+            grid: { left: 10, right: 15, bottom: 50, top: 60, containLabel: true },
+            xAxis: {
+                type: 'category',
+                data: slow_node_distribution.map(d => d.category),
+                axisLabel: { fontSize: 11 }
+            },
+            yAxis: {
+                type: 'value', name: 'Messages', nameLocation: 'center', nameGap: 50, nameRotate: 90,
+                axisLabel: { formatter: (v) => v >= 1e6 ? (v / 1e6).toFixed(1) + 'M' : v >= 1e3 ? (v / 1e3).toFixed(0) + 'K' : v }
+            },
+            series: [
+                {
+                    name: 'Peak (4-11s)',
+                    type: 'bar',
+                    stack: 'total',
+                    data: slow_node_distribution.map(d => Number(d.total_peak_msgs)),
+                    itemStyle: { color: '#2563eb' },
+                    barWidth: '55%'
+                },
+                {
+                    name: 'Tail (12-20s)',
+                    type: 'bar',
+                    stack: 'total',
+                    data: slow_node_distribution.map(d => Number(d.total_tail_msgs)),
+                    itemStyle: { color: '#dc2626' },
+                    barWidth: '55%'
+                }
+            ]
+        };
+    })();
+
+    // Chart 8: Behind rate by Prysm version
+    $: slowNodeVersionConfig = (() => {
+        if (!slow_node_versions || slow_node_versions.length === 0 || slow_node_versions[0].version == null) return {};
+        const sorted = [...slow_node_versions].sort((a, b) => Number(a.behind_pct) - Number(b.behind_pct));
+        return {
+            title: { text: 'Behind Rate by Prysm Version', left: 'center', textStyle: { fontSize: 13 } },
+            tooltip: {
+                trigger: 'axis',
+                axisPointer: { type: 'shadow' },
+                formatter: (params) => {
+                    const d = params[0];
+                    const row = sorted[d.dataIndex];
+                    return `<b>${row.version}</b><br/>` +
+                        `${row.behind_peers} of ${row.total_peers} peers behind (${d.value}%)`;
+                }
+            },
+            grid: { left: 10, right: 15, bottom: 50, top: 45, containLabel: true },
+            xAxis: {
+                type: 'value',
+                name: 'Peers Behind (%)',
+                nameLocation: 'center',
+                nameGap: 30,
+                max: (v) => Math.ceil(v.max * 1.2)
+            },
+            yAxis: {
+                type: 'category',
+                data: sorted.map(d => d.version)
+            },
+            series: [{
+                type: 'bar',
+                data: sorted.map(d => ({
+                    value: Number(d.behind_pct),
+                    itemStyle: {
+                        color: Number(d.behind_pct) > 12 ? '#dc2626' :
+                               Number(d.behind_pct) > 8 ? '#ea580c' :
+                               Number(d.behind_pct) > 6 ? '#f59e0b' : '#16a34a'
+                    }
+                })),
+                label: { show: true, position: 'right', formatter: '{c}%', fontSize: 11 }
+            }]
+        };
+    })();
 </script>
 
 <PageMeta
@@ -386,6 +484,14 @@ select * from xatu.bimodal_agg_att_per_peer
 
 ```sql lag_correlation
 select * from xatu.bimodal_agg_att_lag_correlation
+```
+
+```sql slow_node_distribution
+select * from xatu.bimodal_agg_att_slow_node_distribution
+```
+
+```sql slow_node_versions
+select * from xatu.bimodal_agg_att_slow_node_versions
 ```
 
 <Section type="question">
@@ -476,14 +582,11 @@ At first glance, the low tail rate from behind peers (0.7%) might seem to contra
 
 ### When Profiling Slow Nodes
 
-What does "behind" actually mean? To find out, we classified 2,086 Prysm peers by how often they were caught behind during the 15-minute sample:
+What does "behind" actually mean? To find out, we classified Prysm peers by how often they were caught behind during the 15-minute sample:
 
-| Category | Peers | % | Avg behind rate |
-|---|---|---|---|
-| Rarely behind (`<` 10% of slots) | 1,948 | 93.4% | 0.1% |
-| Sometimes behind (10-40%) | 18 | 0.9% | 19.8% |
-| Often behind (40-80%) | 5 | 0.2% | 63.0% |
-| Always behind (`>` 80%) | 115 | 5.5% | 99.9% |
+<SqlSource source="xatu" query="bimodal_agg_att_slow_node_distribution" />
+
+<ECharts config={slowNodeDistConfig} height="350px" />
 
 The distribution is sharply bimodal: a peer is either keeping up or stuck. There's almost no middle ground. Looking at *how far* behind the stuck peers are reveals two distinct populations:
 
@@ -494,15 +597,11 @@ Block delivery itself is healthy: p50 = 1.9s, p99.9 = 3.8s, with 99.94% of block
 
 Prysm version also matters:
 
-| Version | Peers | Behind % | "Stuck" peers (days behind) |
-|---|---|---|---|
-| v7.0.0 | 369 | **16.5%** | 15 (~51 days avg) |
-| v7.1.1 | 222 | 9.9% | 10 (~19 days avg) |
-| v7.1.0 | 138 | 9.4% | 4 (~27 days avg) |
-| v7.0.1 | 228 | 7.5% | 3 (~17 days avg) |
-| v7.1.2 | 904 | 5.9% | 19 (~13 days avg) |
+<SqlSource source="xatu" query="bimodal_agg_att_slow_node_versions" />
 
-v7.0.0 stands out with nearly 3x the behind rate of v7.1.2 (latest stable). Its stuck peers average 51 days behind, suggesting many of these are unmaintained deployments. Even on v7.1.2, ~2% of peers are deeply stuck - likely operational issues (resource constraints, interrupted syncs) rather than a client bug.
+<ECharts config={slowNodeVersionConfig} height="300px" />
+
+Older versions show significantly higher behind rates - v7.0.0 is nearly 3x worse than v7.1.2 (latest stable), suggesting many of these are unmaintained deployments. Even on v7.1.2, some peers are deeply stuck - likely operational issues (resource constraints, interrupted syncs) rather than a client bug.
 
 ### Analysis
 
