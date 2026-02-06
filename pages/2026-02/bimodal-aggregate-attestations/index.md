@@ -472,7 +472,7 @@ Lighthouse and Teku peers cluster tightly near 0% (median 0.0%, P95 under 4%). P
 
 ### When Tracing the Trigger
 
-After staring at the histogram long enough, the second peak at 14-16s starts to look suspiciously like the shape of block arrivals for the *next* slot (~12s from slot start). If that's not pareidolia and the tail really is tracking block arrivals, it would point to a mechanism triggered by block processing. To test this, for each slot N we plot the aggregate tail P50 against the block arrival time at slot N+1.
+After staring at the histogram long enough, the second peak at 14-16s starts to look suspiciously like the shape of block arrivals for the *next* slot (~12s from slot start). If that's not pareidolia, it would suggest a mechanism where block N+1's arrival triggers the delayed processing. One possibility: if a node is missing block N when aggregates arrive at 8s, it may not fetch block N until block N+1 arrives and reveals the missing parent - at which point the node requests block N via req/resp and processes the queued aggregates. To test this, for each slot N we plot the aggregate tail P50 against the block arrival time at slot N+1.
 
 <SqlSource source="xatu" query="bimodal_agg_att_block_correlation" />
 
@@ -509,7 +509,9 @@ func (s *Service) validateBlockInAttestation(ctx context.Context, satt ethpb.Sig
 }
 ```
 
-When the missing block eventually arrives, `processPendingAttsForBlock()` flushes the queue. For each pending aggregate, [`processAggregate()`](https://github.com/prysmaticlabs/prysm/blob/862fb2eb4a13ddd6db636b5d53de3d0af7b83866/beacon-chain/sync/pending_attestations_queue.go#L352-L375) re-publishes it via gossipsub:
+When the missing block eventually arrives, [`processPendingAttsForBlock()`](https://github.com/prysmaticlabs/prysm/blob/862fb2eb4a13ddd6db636b5d53de3d0af7b83866/beacon-chain/sync/subscriber_beacon_blocks.go#L60-L82) flushes the queue. This is called immediately after block import in `beaconBlockSubscriber`. Notably, the [pending blocks queue](https://github.com/prysmaticlabs/prysm/blob/862fb2eb4a13ddd6db636b5d53de3d0af7b83866/beacon-chain/sync/pending_blocks_queue.go#L134-L142) also performs parent-chain sync: when block N+1 arrives but parent N is missing, Prysm sends a `BeaconBlocksByRoot` req/resp request to fetch block N. This may explain the strong r=0.91 correlation with block N+1's arrival - the next block's arrival triggers the fetch of the missing parent, which then flushes the pending attestations.
+
+For each pending aggregate, [`processAggregate()`](https://github.com/prysmaticlabs/prysm/blob/862fb2eb4a13ddd6db636b5d53de3d0af7b83866/beacon-chain/sync/pending_attestations_queue.go#L352-L375) re-publishes it via gossipsub:
 
 ```go
 func (s *Service) processAggregate(ctx context.Context, aggregate ethpb.SignedAggregateAttAndProof) error {
