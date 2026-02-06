@@ -409,46 +409,57 @@ tags:
         };
     })();
 
-    // Chart 8: Behind rate by Prysm version
+    // Chart 8: Message volume by Prysm version (peak vs tail)
     $: slowNodeVersionConfig = (() => {
         if (!slow_node_versions || slow_node_versions.length === 0 || slow_node_versions[0].version == null) return {};
-        const sorted = [...slow_node_versions].sort((a, b) => Number(a.behind_pct) - Number(b.behind_pct));
+        const sorted = [...slow_node_versions].sort((a, b) => Number(a.total_msgs) - Number(b.total_msgs));
         return {
-            title: { text: 'Behind Rate by Prysm Version', left: 'center', textStyle: { fontSize: 13 } },
+            title: { text: 'Aggregate Messages by Prysm Version', left: 'center', textStyle: { fontSize: 13 } },
             tooltip: {
                 trigger: 'axis',
                 axisPointer: { type: 'shadow' },
                 formatter: (params) => {
-                    const d = params[0];
-                    const row = sorted[d.dataIndex];
-                    return `<b>${row.version}</b><br/>` +
-                        `${row.behind_peers} of ${row.total_peers} peers behind (${d.value}%)`;
+                    const idx = params[0].dataIndex;
+                    const row = sorted[idx];
+                    const peak = params.find(p => p.seriesName === 'Peak (4-11s)');
+                    const tail = params.find(p => p.seriesName === 'Tail (12-20s)');
+                    return `<b>${row.version}</b> (${Number(row.peer_count).toLocaleString()} peers)<br/>` +
+                        `Peak: ${Number(peak?.value || 0).toLocaleString()}<br/>` +
+                        `Tail: ${Number(tail?.value || 0).toLocaleString()} (${row.tail_pct}%)<br/>` +
+                        `Total: ${Number(row.total_msgs).toLocaleString()}`;
                 }
             },
-            grid: { left: 10, right: 15, bottom: 50, top: 45, containLabel: true },
+            legend: { data: ['Peak (4-11s)', 'Tail (12-20s)'], top: 30, textStyle: { fontSize: 11 } },
+            grid: { left: 10, right: 15, bottom: 50, top: 60, containLabel: true },
             xAxis: {
                 type: 'value',
-                name: 'Peers Behind (%)',
+                name: 'Messages',
                 nameLocation: 'center',
                 nameGap: 30,
-                max: (v) => Math.ceil(v.max * 1.2)
+                axisLabel: { formatter: (v) => v >= 1e6 ? (v / 1e6).toFixed(1) + 'M' : v >= 1e3 ? (v / 1e3).toFixed(0) + 'K' : v }
             },
             yAxis: {
                 type: 'category',
                 data: sorted.map(d => d.version)
             },
-            series: [{
-                type: 'bar',
-                data: sorted.map(d => ({
-                    value: Number(d.behind_pct),
-                    itemStyle: {
-                        color: Number(d.behind_pct) > 12 ? '#dc2626' :
-                               Number(d.behind_pct) > 8 ? '#ea580c' :
-                               Number(d.behind_pct) > 6 ? '#f59e0b' : '#16a34a'
-                    }
-                })),
-                label: { show: true, position: 'right', formatter: '{c}%', fontSize: 11 }
-            }]
+            series: [
+                {
+                    name: 'Peak (4-11s)',
+                    type: 'bar',
+                    stack: 'total',
+                    data: sorted.map(d => Number(d.peak_msgs)),
+                    itemStyle: { color: '#2563eb' },
+                    barWidth: '55%'
+                },
+                {
+                    name: 'Tail (12-20s)',
+                    type: 'bar',
+                    stack: 'total',
+                    data: sorted.map(d => Number(d.tail_msgs)),
+                    itemStyle: { color: '#dc2626' },
+                    barWidth: '55%'
+                }
+            ]
         };
     })();
 </script>
@@ -601,7 +612,7 @@ Prysm version also matters:
 
 <ECharts config={slowNodeVersionConfig} height="300px" />
 
-Older versions show significantly higher behind rates - v7.0.0 is nearly 3x worse than v7.1.2 (latest stable), suggesting many of these are unmaintained deployments. Even on v7.1.2, some peers are deeply stuck - likely operational issues (resource constraints, interrupted syncs) rather than a client bug.
+v7.1.2 (latest stable) dominates both peer count and total message volume. The tail proportion within each version's traffic hints at whether version-specific behavior affects rebroadcast rates, though peer count differences make direct comparisons difficult.
 
 ### Analysis
 
