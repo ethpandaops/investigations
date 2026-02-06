@@ -22,7 +22,7 @@ tags:
     $: bimodalConfig = (() => {
         if (!bimodal || bimodal.length === 0 || bimodal[0].bin_ms == null) return {};
         return {
-            title: { text: 'Aggregate Attestation Propagation Times (250ms bins)', left: 'center' },
+            title: { text: 'Aggregate Attestation Propagation Times (250ms bins)', left: 'center', textStyle: { fontSize: 13 } },
             tooltip: {
                 trigger: 'axis',
                 formatter: (params) => {
@@ -30,7 +30,7 @@ tags:
                     return `${(d.name / 1000).toFixed(1)}s: ${Number(d.value).toLocaleString()} messages`;
                 }
             },
-            grid: { left: 80, right: 30, bottom: 80, top: 60 },
+            grid: { left: 10, right: 15, bottom: 70, top: 50, containLabel: true },
             xAxis: {
                 type: 'category',
                 data: bimodal.map(d => Number(d.bin_ms)),
@@ -41,24 +41,18 @@ tags:
                 },
                 name: 'Seconds from Slot Start',
                 nameLocation: 'center',
-                nameGap: 40
+                nameGap: 35
             },
-            yAxis: { type: 'value' },
+            yAxis: {
+                type: 'value', name: 'Message Count', nameLocation: 'center', nameGap: 50, nameRotate: 90,
+                axisLabel: { formatter: (v) => v >= 1e6 ? (v / 1e6).toFixed(0) + 'M' : v >= 1e3 ? (v / 1e3).toFixed(0) + 'K' : v }
+            },
             series: [{
                 type: 'bar',
                 data: bimodal.map(d => Number(d.cnt)),
                 itemStyle: { color: '#2563eb' },
                 barWidth: '95%'
-            }],
-            graphic: [
-                {
-                    type: 'text',
-                    left: 15,
-                    top: 'center',
-                    rotation: Math.PI / 2,
-                    style: { text: 'Message Count', fontSize: 12, fill: '#666' }
-                }
-            ]
+            }]
         };
     })();
 
@@ -75,7 +69,7 @@ tags:
             return '#64748b';
         };
         return {
-            title: { text: 'Tail Percentage by Peer Client', left: 'center' },
+            title: { text: 'Tail Percentage by Peer Client', left: 'center', textStyle: { fontSize: 13 } },
             tooltip: {
                 trigger: 'axis',
                 formatter: (params) => {
@@ -83,12 +77,12 @@ tags:
                     return `${d.name}: ${d.value}% of messages in tail`;
                 }
             },
-            grid: { left: 100, right: 80, bottom: 60, top: 60 },
+            grid: { left: 10, right: 15, bottom: 50, top: 45, containLabel: true },
             xAxis: {
                 type: 'value',
                 name: 'Messages in Tail (%)',
                 nameLocation: 'center',
-                nameGap: 40,
+                nameGap: 30,
                 max: 60
             },
             yAxis: {
@@ -129,21 +123,24 @@ tags:
         const maxX = Math.max(...xs);
 
         return {
-            title: { text: `Tail Timing vs Next-Slot Block Arrival (r = ${r.toFixed(3)})`, left: 'center' },
+            title: { text: `Tail Timing vs Block Arrival (r = ${r.toFixed(3)})`, left: 'center', textStyle: { fontSize: 13 } },
             tooltip: {
                 trigger: 'item',
                 formatter: (p) => p.seriesType === 'scatter'
                     ? `Block: ${p.value[0]}ms, Tail P50: ${p.value[1]}ms`
                     : ''
             },
-            grid: { left: 80, right: 30, bottom: 80, top: 60 },
+            grid: { left: 10, right: 15, bottom: 70, top: 50, containLabel: true },
             xAxis: {
                 type: 'value',
-                name: 'Block Arrival, Slot N+1 (ms from slot start)',
+                name: 'Block Arrival, Slot N+1 (ms)',
                 nameLocation: 'center',
-                nameGap: 45
+                nameGap: 35
             },
-            yAxis: { type: 'value' },
+            yAxis: {
+                type: 'value', name: 'Tail P50, Slot N (ms)', nameLocation: 'center', nameGap: 50, nameRotate: 90,
+                axisLabel: { formatter: (v) => v >= 1e3 ? (v / 1e3).toFixed(0) + 'K' : v }
+            },
             series: [
                 {
                     type: 'scatter',
@@ -158,15 +155,6 @@ tags:
                     symbol: 'none',
                     tooltip: { show: false }
                 }
-            ],
-            graphic: [
-                {
-                    type: 'text',
-                    left: 15,
-                    top: 'center',
-                    rotation: Math.PI / 2,
-                    style: { text: 'Aggregate Tail P50, Slot N (ms)', fontSize: 12, fill: '#666' }
-                }
             ]
         };
     })();
@@ -175,7 +163,7 @@ tags:
     $: gapConfig = (() => {
         if (!rebroadcast_gap || rebroadcast_gap.length === 0 || rebroadcast_gap[0].bin_s == null) return {};
         return {
-            title: { text: 'Novel vs Rebroadcast Observations (1-hour sample)', left: 'center' },
+            title: { text: 'Novel vs Rebroadcast Observations (1hr)', left: 'center', textStyle: { fontSize: 13 } },
             tooltip: {
                 trigger: 'axis',
                 formatter: (params) => {
@@ -190,17 +178,20 @@ tags:
                         `Rebroadcast: ${r.toLocaleString()} (${pct}%)`;
                 }
             },
-            legend: { data: ['Novel', 'Rebroadcast'], top: 30 },
-            grid: { left: 80, right: 30, bottom: 80, top: 70 },
+            legend: { data: ['Novel', 'Rebroadcast'], top: 28 },
+            grid: { left: 10, right: 15, bottom: 70, top: 60, containLabel: true },
             xAxis: {
                 type: 'category',
                 data: rebroadcast_gap.map(d => Number(d.bin_s)),
                 axisLabel: { fontSize: 11 },
                 name: 'Seconds from Slot Start',
                 nameLocation: 'center',
-                nameGap: 40
+                nameGap: 35
             },
-            yAxis: { type: 'value' },
+            yAxis: {
+                type: 'value', name: 'Observation Count', nameLocation: 'center', nameGap: 50, nameRotate: 90,
+                axisLabel: { formatter: (v) => v >= 1e6 ? (v / 1e6).toFixed(0) + 'M' : v >= 1e3 ? (v / 1e3).toFixed(0) + 'K' : v }
+            },
             series: [
                 {
                     name: 'Novel',
@@ -217,15 +208,6 @@ tags:
                     data: rebroadcast_gap.map(d => Number(d.rebroadcast_cnt)),
                     itemStyle: { color: '#dc2626' },
                     barWidth: '90%'
-                }
-            ],
-            graphic: [
-                {
-                    type: 'text',
-                    left: 15,
-                    top: 'center',
-                    rotation: Math.PI / 2,
-                    style: { text: 'Observation Count', fontSize: 12, fill: '#666' }
                 }
             ]
         };
@@ -252,7 +234,7 @@ tags:
             totals[s] = behaviors.reduce((sum, b) => sum + (dataMap[s]?.[b]?.cnt || 0), 0);
         });
         return {
-            title: { text: 'Prysm Peer Forwarding Behavior by Block State', left: 'center', textStyle: { fontSize: 14 } },
+            title: { text: 'Prysm Peer Forwarding by Block State', left: 'center', textStyle: { fontSize: 13 } },
             tooltip: {
                 trigger: 'axis',
                 axisPointer: { type: 'shadow' },
@@ -265,8 +247,8 @@ tags:
                     return s;
                 }
             },
-            legend: { data: behaviors, top: 35 },
-            grid: { left: 130, right: 40, bottom: 40, top: 75 },
+            legend: { data: behaviors, top: 30, textStyle: { fontSize: 11 } },
+            grid: { left: 10, right: 15, bottom: 35, top: 65, containLabel: true },
             xAxis: {
                 type: 'value',
                 max: 100,
@@ -301,7 +283,7 @@ tags:
     $: perPeerConfig = (() => {
         if (!per_peer || per_peer.length === 0 || per_peer[0].client == null) return {};
         const sorted = [...per_peer].filter(d => d.client);
-        const clients = sorted.map(d => `${d.client} (${Number(d.peer_count).toLocaleString()} peers)`);
+        const clients = sorted.map(d => d.client);
         const clientColor = {
             'Prysm': '#2563eb',
             'Lighthouse': '#f59e0b',
@@ -312,7 +294,7 @@ tags:
             'Grandine': '#06b6d4'
         };
         return {
-            title: { text: 'Per-Peer Tail Rate Distribution by Client', left: 'center' },
+            title: { text: 'Per-Peer Tail Rate by Client', left: 'center', textStyle: { fontSize: 13 } },
             tooltip: {
                 trigger: 'item',
                 formatter: (p) => {
@@ -326,7 +308,7 @@ tags:
                         `P5: ${d.p5}%`;
                 }
             },
-            grid: { left: 160, right: 40, bottom: 60, top: 50 },
+            grid: { left: 10, right: 15, bottom: 50, top: 45, containLabel: true },
             xAxis: {
                 type: 'value',
                 name: 'Tail Rate per Peer (%)',
