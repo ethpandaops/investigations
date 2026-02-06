@@ -544,6 +544,10 @@ Per-peer variance is massive (IQR 10-54% across individual Prysm nodes), suggest
 
 **Fast nodes** that have already processed the referenced block return `ValidationAccept` immediately - the aggregate is forwarded during the main peak at 8-9s. **Slow nodes** that haven't processed the block yet queue the aggregate and return `ValidationIgnore`. When the block finally arrives, the pending queue is flushed and `Broadcast()` re-publishes the aggregate - producing the second peak at 14-16s.
 
+The parent-chain sync mechanism in `pending_blocks_queue.go` may explain *why* the tail correlates so strongly with block N+1's arrival (r=0.91). When a slow node is missing block N, it may not fetch it until block N+1 arrives and reveals the missing parent:
+
+<img src="/images/prysm-mechanism.svg" alt="Prysm parent-chain sync sequence" style="max-width: 700px; width: 100%;" />
+
 #### Erigon: Proposer-Only Forwarding
 
 Since the Fulu fork (activated Dec 3, 2025), Erigon's Caplin consensus layer only processes aggregates on nodes with upcoming proposer duties. In [`aggregate_and_proof_service.go`](https://github.com/erigontech/erigon/blob/627b07ddbb6fa04c73e1a3e9a0985d32026704c4/cl/phase1/network/services/aggregate_and_proof_service.go#L129-L135), the `isLocalValidatorProposer` check gates all aggregate processing:
