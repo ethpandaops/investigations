@@ -518,6 +518,8 @@ func (s *Service) processAggregate(ctx context.Context, aggregate ethpb.SignedAg
 }
 ```
 
+Note that `validateAggregatedAtt` performs cryptographic and consensus validation (signatures, committee membership, FFG consistency) but does **not** check block presence - that's solely the job of `validateBlockInAttestation`. So if the block is now available (which it should be, since the queue was flushed by block arrival), both checks pass and `Broadcast()` fires.
+
 This `Broadcast()` call is a full gossipsub re-publish. If this code path is responsible for the tail, the propagation may work as follows: because the original aggregate was handled with `ValidationIgnore`, it would not be added to the gossipsub seen cache on the behind node. So the re-broadcast could propagate through other behind Prysm nodes that also returned `ValidationIgnore` and lack the `message_id` in their seen cache - while peers that already accepted the original would correctly deduplicate and ignore it.
 
 Per-peer variance is massive (IQR 10-54% across individual Prysm nodes), suggesting node-specific state (block processing latency, mesh topology) strongly modulates the effect. If this is the mechanism, it would function as a race condition:
@@ -525,6 +527,17 @@ Per-peer variance is massive (IQR 10-54% across individual Prysm nodes), suggest
 ![Prysm race condition diagram](/images/prysm-race-condition.jpg)
 
 **Fast nodes** that have already processed the referenced block return `ValidationAccept` immediately - the aggregate is forwarded during the main peak at 8-9s. **Slow nodes** that haven't processed the block yet queue the aggregate and return `ValidationIgnore`. When the block finally arrives, the pending queue is flushed and `Broadcast()` re-publishes the aggregate - producing the second peak at 14-16s.
+
+#### Lighthouse and Teku: No Re-broadcast
+
+Lighthouse and Teku both queue aggregates for unknown blocks, but handle them differently when the block arrives - and this may be why they show almost no tail (`<` 1% and ~1% respectively).
+
+**Lighthouse** queues the attestation in a [reprocessing queue](https://github.com/sigp/lighthouse/blob/unstable/beacon_node/beacon_processor/src/scheduler/work_reprocessing_queue.rs) with a 12-second timeout. When the block arrives, it re-validates the aggregate and calls `propagate_validation_result(Accept)` on the **original** gossipsub message - telling libp2p to accept the message it already received, not publishing a new one. It also sets `allow_reprocess: false` on the re-queued item to prevent infinite reprocessing loops.
+
+**Teku** returns [`SAVE_FOR_FUTURE`](https://github.com/Consensys/teku/blob/master/ethereum/statetransition/src/main/java/tech/pegasys/teku/statetransition/validation/AttestationValidator.java) and stores the aggregate in a [`PendingPool`](https://github.com/Consensys/teku/blob/master/ethereum/statetransition/src/main/java/tech/pegasys/teku/statetransition/util/PendingPool.java) indexed by the required block root. When `onBlockImported()` fires, it retrieves only the attestations waiting on that specific block and re-validates them through the normal path - again, no new `Broadcast()`.
+
+The critical difference: both clients re-validate the *original* gossipsub message rather than creating a new publish. Prysm's `Broadcast()` call generates a fresh gossipsub message with a new publish, which is what other nodes see as a "rebroadcast".
+
 #### Erigon: Proposer-Only Forwarding
 
 Since the Fulu fork (activated Dec 3, 2025), Erigon's Caplin consensus layer only processes aggregates on nodes with upcoming proposer duties. In [`aggregate_and_proof_service.go`](https://github.com/erigontech/erigon/blob/627b07ddbb6fa04c73e1a3e9a0985d32026704c4/cl/phase1/network/services/aggregate_and_proof_service.go#L129-L135), the `isLocalValidatorProposer` check gates all aggregate processing:
