@@ -238,7 +238,7 @@ The EVM has precompiled contracts at addresses `0x01` through `0x13`. These are 
 | `0x06`–`0x08` | [BN128 ops](./bn128) | ecAdd, ecMul, ecPairing |
 | `0x09` | [blake2f](./blake2f) | BLAKE2b compression function |
 | `0x0a` | [point_eval](./point-eval) | KZG point evaluation (EIP-4844) |
-| `0x0b`–`0x13` | [BLS12-381 ops](./bls12-381) | G1/G2 add, mul, multiexp, pairing, map-to-curve (EIP-2537, Pectra) |
+| `0x0b`–`0x13` | [BLS12-381 ops](./bls) | G1/G2 add, mul, multiexp, pairing, map-to-curve (EIP-2537, Pectra) |
 
 Precompile gas pricing is a live debate. If a precompile is underpriced relative to its actual execution cost, attackers can stuff blocks with cheap-but-slow calls. But repricing has real consequences for every protocol that depends on that precompile.
 
@@ -290,6 +290,6 @@ Same data, but showing gas instead of calls. The picture shifts — modexp and e
 - modexp is #1 by both call count (25.3%) and gas (37.7%), driven almost entirely by Aztec's ZK rollup ([details](./modexp))
 - The gas ranking differs from the call ranking — expensive-per-call precompiles like ecPairing punch above their weight
 - Usage is flat over the analysis period, no sudden shifts
-- BLS12-381 precompiles (Pectra) have 63 calls total — g2multiexp accounts for most of them ([details](./bls12-381))
+- BLS12-381 precompiles (Pectra) have 63 calls total — g2multiexp accounts for most of them ([details](./bls))
 
 </Section>
