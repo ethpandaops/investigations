@@ -92,10 +92,10 @@ EIP-2537 added nine BLS12-381 precompiles at addresses `0x0b` through `0x13`, ac
 | `0x0f` | g2mul | G2 scalar multiplication |
 | `0x10` | g2multiexp | G2 multi-scalar multiplication |
 | `0x11` | pairing | BLS12-381 pairing check |
-| `0x12` | map_fp_to_g1 | Map field element to G1 |
-| `0x13` | map_fp2_to_g2 | Map field element to G2 |
+| `0x12` | map\_fp\_to\_g1 | Map field element to G1 |
+| `0x13` | map\_fp2\_to\_g2 | Map field element to G2 |
 
-Since Pectra activated partway through our analysis window, these precompiles only have data for the latter portion of the block range.
+Despite Pectra being live for the entire analysis window, BLS12-381 usage is extremely sparse — only 63 calls total.
 
 </Section>
 
@@ -111,7 +111,7 @@ Gas costs vary by operation type and input size.
 
 <ECharts config={gasDistConfig} height="400px" />
 
-No callers chart for BLS12-381 — the self-join query needed for caller resolution uses a reduced ~6,000 block window (see the [overview page](./index) background section), and that window happened to contain zero BLS12-381 calls. All 63 BLS12-381 calls in the dataset landed in blocks 24,393,600–24,422,400, well before the callers sample window.
+No callers chart for BLS12-381. The self-join query needed for caller resolution uses a reduced ~6,000 block window, and that window contained zero BLS12-381 calls. All 63 calls landed in blocks 24,393,600 to 24,422,400, well before the callers sample window.
 
 </Section>
 
@@ -119,9 +119,9 @@ No callers chart for BLS12-381 — the self-join query needed for caller resolut
 
 ## Takeaways
 
-- Only 63 BLS12-381 calls total across the entire 426K-block analysis window — all concentrated in blocks 24,393,600–24,422,400
-- g2multiexp accounts for 48 of those 63 calls, consuming 292M gas (by far the most expensive BLS12-381 operation used so far)
+- Only 63 BLS12-381 calls total across the entire 426K-block analysis window, all concentrated in blocks 24,393,600 to 24,422,400
+- g2multiexp accounts for 48 of those 63 calls, consuming 292M gas
 - g1mul, pairing, g1multiexp, g2mul, and g2add have single-digit usage each
-- g1add, map_fp_to_g1, and map_fp2_to_g2 have zero calls in this window
+- g1add, map\_fp\_to\_g1, and map\_fp2\_to\_g2 have zero calls in this window
 
 </Section>
