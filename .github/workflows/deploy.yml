@@ -50,6 +50,7 @@ jobs:
             username: pandaopsinvestigations
             password: ${{ secrets.XATU_CBT_PASSWORD }}
             cacheDir: .cache/queries
+            timeout: 600000
           EOF
 
       - name: Build Evidence Site

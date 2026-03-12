@@ -194,7 +194,7 @@ One contract accounts for 94% of all modexp calls: `0x77e3ba096355510e0e9f60d292
 
 Tracing up from the verifier to the top-level transaction:
 
-```
+```text
 depth 0: 0x603b...ca12 — "Aztec: Ignition Chain L2 Rollup" (Etherscan-verified)
   └ depth 1: 0x1e0a...c1a4 — Implementation contract (DELEGATECALL)
       ├ depth 2: 24x ecrecover — Signature verification
