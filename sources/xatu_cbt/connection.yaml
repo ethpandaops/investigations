@@ -2,3 +2,4 @@ name: xatu_cbt
 type: cached-clickhouse
 options:
   cacheDir: .cache/queries
+  timeout: 600000

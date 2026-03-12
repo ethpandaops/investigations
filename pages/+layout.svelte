@@ -381,6 +381,10 @@
 	:global(aside div.relative.pl-3.border-l:has(a.text-primary) + div.relative.pl-3.border-l + div.relative.pl-3.border-l + div.relative.pl-3.border-l),
 	:global(aside div.relative.pl-3.border-l:has(a.text-primary) + div.relative.pl-3.border-l + div.relative.pl-3.border-l + div.relative.pl-3.border-l + div.relative.pl-3.border-l),
 	:global(aside div.relative.pl-3.border-l:has(a.text-primary) + div.relative.pl-3.border-l + div.relative.pl-3.border-l + div.relative.pl-3.border-l + div.relative.pl-3.border-l + div.relative.pl-3.border-l),
+	:global(aside div.relative.pl-3.border-l:has(a.text-primary) + div.relative.pl-3.border-l + div.relative.pl-3.border-l + div.relative.pl-3.border-l + div.relative.pl-3.border-l + div.relative.pl-3.border-l + div.relative.pl-3.border-l),
+	:global(aside div.relative.pl-3.border-l:has(a.text-primary) + div.relative.pl-3.border-l + div.relative.pl-3.border-l + div.relative.pl-3.border-l + div.relative.pl-3.border-l + div.relative.pl-3.border-l + div.relative.pl-3.border-l + div.relative.pl-3.border-l),
+	:global(aside div.relative.pl-3.border-l:has(a.text-primary) + div.relative.pl-3.border-l + div.relative.pl-3.border-l + div.relative.pl-3.border-l + div.relative.pl-3.border-l + div.relative.pl-3.border-l + div.relative.pl-3.border-l + div.relative.pl-3.border-l + div.relative.pl-3.border-l),
+	:global(aside div.relative.pl-3.border-l:has(a.text-primary) + div.relative.pl-3.border-l + div.relative.pl-3.border-l + div.relative.pl-3.border-l + div.relative.pl-3.border-l + div.relative.pl-3.border-l + div.relative.pl-3.border-l + div.relative.pl-3.border-l + div.relative.pl-3.border-l + div.relative.pl-3.border-l),
 	:global(aside div.relative.pl-3.border-l:has(~ div.relative.pl-3.border-l a.text-primary)) {
 		display: block !important;
 	}

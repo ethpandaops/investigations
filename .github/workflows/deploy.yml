@@ -3,8 +3,6 @@ name: Deploy to GitHub Pages
 on:
   push:
     branches: ['master']
-  schedule:
-    - cron: '0 6 * * *'  # Daily rebuild at 6am UTC for fresh live data
   workflow_dispatch:
 
 concurrency:
