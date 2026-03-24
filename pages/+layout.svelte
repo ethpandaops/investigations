@@ -248,6 +248,7 @@
 		width: 15rem !important;
 		padding-left: 1.25rem !important;
 		padding-top: 1.5rem !important;
+		scrollbar-width: none !important;
 	}
 
 	/* Section containers - generous spacing */
@@ -271,6 +272,7 @@
 		display: flex !important;
 		align-items: center !important;
 		gap: 0.5rem !important;
+		position: static !important;
 	}
 	:global(aside .font-semibold::before) {
 		content: "" !important;
