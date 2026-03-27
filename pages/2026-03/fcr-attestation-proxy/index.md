@@ -14,7 +14,6 @@ tags:
 <script>
     import PageMeta from '$lib/PageMeta.svelte';
     import Section from '$lib/Section.svelte';
-    import SqlSource from '$lib/SqlSource.svelte';
     import { ECharts } from '@evidence-dev/core-components';
 
     // ============================================================
@@ -30,6 +29,17 @@ tags:
     // Each bin shows how many slots have |drift| in that range
     const driftBins = ['0%', '0-0.01%', '0.01-0.05%', '0.05-0.1%', '0.1-0.2%', '0.2-0.5%', '0.5-1%', '1-2%', '2-5%', '5-10%'];
     const driftCounts = [1454, 1453, 1851, 682, 641, 490, 193, 130, 93, 9];
+
+    // ============================================================
+    // Pre-computed data: Daily inclusion delay statistics
+    // ============================================================
+    // Per-validator average inclusion delay (slots) by day.
+    // Source: fct_attestation_inclusion_delay_daily on xatu-cbt, Feb 25 - Mar 21 2026.
+    // Each validator attests once per slot; inclusion delay = block_slot - attested_slot.
+    // A delay of 1.0 means inclusion in the very next block.
+    const inclusionDays = ['2026-02-25', '2026-02-26', '2026-02-27', '2026-02-28', '2026-03-01', '2026-03-02', '2026-03-03', '2026-03-04', '2026-03-05', '2026-03-06', '2026-03-07', '2026-03-08', '2026-03-09', '2026-03-10', '2026-03-11', '2026-03-12', '2026-03-13', '2026-03-14', '2026-03-15', '2026-03-16', '2026-03-17', '2026-03-18', '2026-03-19', '2026-03-20', '2026-03-21'];
+    const inclusionAvg = [1.008, 1.007, 1.006, 1.009, 1.005, 1.008, 1.007, 1.007, 1.007, 1.01, 1.008, 1.006, 1.007, 1.009, 1.008, 1.009, 1.006, 1.006, 1.005, 1.009, 1.01, 1.032, 1.023, 1.049, 1.035];
+    const inclusionP95 = [1.013, 1.014, 1.011, 1.012, 1.008, 1.011, 1.011, 1.012, 1.015, 1.014, 1.011, 1.011, 1.009, 1.008, 1.009, 1.01, 1.009, 1.012, 1.007, 1.008, 1.014, 1.083, 1.057, 1.039, 1.019];
 
     // ============================================================
     // Chart configs
@@ -71,72 +81,41 @@ tags:
         }]
     };
 
-    // Chart 2: Daily inclusion delay (from SQL query)
-    $: inclusionConfig = (() => {
-        if (!fcr_proxy_inclusion_delay || fcr_proxy_inclusion_delay.length === 0 || fcr_proxy_inclusion_delay[0].day == null) return {};
-
-        const days = [...new Set(fcr_proxy_inclusion_delay.map(d => d.day))];
-        const delays = [1, 2, 3, 4, 5];
-
-        const dataMap = {};
-        fcr_proxy_inclusion_delay.forEach(d => {
-            if (!dataMap[d.inclusion_delay]) dataMap[d.inclusion_delay] = {};
-            dataMap[d.inclusion_delay][d.day] = Number(d.attestation_count);
-        });
-
-        // Compute daily totals for percentage calculation
-        const dayTotals = {};
-        days.forEach(day => {
-            dayTotals[day] = delays.reduce((sum, delay) => sum + (dataMap[delay]?.[day] || 0), 0);
-        });
-
-        const colors = ['#2563eb', '#7c3aed', '#ea580c', '#16a34a', '#9ca3af'];
-        const series = delays.map((delay, i) => ({
-            name: `Delay ${delay}`,
-            type: 'bar',
-            stack: 'total',
-            data: days.map(day => {
-                const count = dataMap[delay]?.[day] || 0;
-                const total = dayTotals[day] || 1;
-                return Number((count / total * 100).toFixed(2));
-            }),
-            itemStyle: { color: colors[i] }
-        }));
-
-        return {
-            title: { text: 'Daily Attestation Inclusion Delay Distribution', left: 'center', textStyle: { fontSize: 13 } },
-            tooltip: {
-                trigger: 'axis',
-                formatter: (params) => {
-                    let html = `<b>${params[0].axisValue}</b><br/>`;
-                    params.forEach(p => {
-                        if (p.value > 0.1) html += `${p.marker} ${p.seriesName}: ${p.value}%<br/>`;
-                    });
-                    return html;
-                }
-            },
-            legend: { data: delays.map(d => `Delay ${d}`), bottom: 0 },
-            grid: { left: 60, right: 30, bottom: 60, top: 50 },
-            xAxis: {
-                type: 'category',
-                data: days,
-                name: 'Date',
-                nameLocation: 'center',
-                nameGap: 40,
-                axisLabel: { interval: 6, rotate: 45, fontSize: 10 }
-            },
-            yAxis: {
-                type: 'value',
-                name: '% of Attestations',
-                nameLocation: 'center',
-                nameGap: 40,
-                nameRotate: 90,
-                min: 0,
-                max: 100
-            },
-            series: series
-        };
-    })();
+    // Chart 2: Daily inclusion delay (pre-computed static data)
+    $: inclusionConfig = {
+        title: { text: 'Daily Average Inclusion Delay (Slots)', left: 'center', textStyle: { fontSize: 13 } },
+        tooltip: {
+            trigger: 'axis',
+            formatter: (params) => {
+                let html = `<b>${params[0].axisValue}</b><br/>`;
+                params.forEach(p => { html += `${p.marker} ${p.seriesName}: ${p.value} slots<br/>`; });
+                return html;
+            }
+        },
+        legend: { data: ['Average', 'P95'], bottom: 0 },
+        grid: { left: 70, right: 30, bottom: 60, top: 50 },
+        xAxis: {
+            type: 'category',
+            data: inclusionDays,
+            name: 'Date',
+            nameLocation: 'center',
+            nameGap: 40,
+            axisLabel: { interval: 6, rotate: 45, fontSize: 10 }
+        },
+        yAxis: {
+            type: 'value',
+            name: 'Inclusion Delay (slots)',
+            nameLocation: 'center',
+            nameGap: 50,
+            nameRotate: 90,
+            min: 1.0,
+            max: 1.1
+        },
+        series: [
+            { name: 'Average', type: 'line', data: inclusionAvg, symbol: 'none', lineStyle: { color: '#2563eb', width: 2 }, itemStyle: { color: '#2563eb' }, areaStyle: { color: 'rgba(37, 99, 235, 0.1)' } },
+            { name: 'P95', type: 'line', data: inclusionP95, symbol: 'none', lineStyle: { color: '#ea580c', width: 1.5, type: 'dashed' }, itemStyle: { color: '#ea580c' } }
+        ]
+    };
 </script>
 
 <PageMeta
@@ -147,10 +126,6 @@ tags:
     startTime="2026-02-25T00:00:00Z"
     endTime="2026-03-24T23:59:59Z"
 />
-
-```sql fcr_proxy_inclusion_delay
-select * from xatu.fcr_proxy_inclusion_delay
-```
 
 <Section type="question">
 
@@ -230,13 +205,13 @@ Mean drift is consistently under 0.12%, and 97%+ of slots have drift within 1%.
 
 ### What does the inclusion delay look like over time?
 
-*201,600 slots from Feb 25 to Mar 24 2026 (28 days). Source: `canonical_beacon_elaborated_attestation` on xatu.*
+*180,000 slots from Feb 25 to Mar 21 2026 (25 days). Source: `fct_attestation_inclusion_delay_daily` on xatu-cbt.*
 
-<SqlSource source="xatu" query="fcr_proxy_inclusion_delay" />
+The per-validator inclusion delay measures how many slots after attesting each validator's attestation is included in a block. A delay of 1.0 means inclusion in the very next block.
 
 <ECharts config={inclusionConfig} height="450px" />
 
-The daily breakdown confirms the pattern is stable: ~80% of attestation objects land in the next block (delay 1), ~12% at delay 2, ~5% at delay 3, with a long tail beyond. At the unique validator level, this translates to 99.9% coverage from the first block alone, since later-included attestations largely duplicate validators already counted.
+The average inclusion delay hovers between 1.005 and 1.01 slots for most of the period, meaning the vast majority of validators are included in the very next block. Even the 95th percentile rarely exceeds 1.015. The slight increase in the last few days (Mar 18-21) is consistent with transient network conditions but still well within acceptable bounds for FCR simulation.
 
 </Section>
 
