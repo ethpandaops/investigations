@@ -16,11 +16,14 @@ mev_blocks AS (
       AND slot_start_date_time <  '2026-05-02 00:00:00'
 ),
 blocks AS (
-    SELECT slot, block_root, block_total_bytes_compressed AS post_b
+    SELECT slot, block_root,
+           block_total_bytes_compressed AS post_b,
+           block_total_bytes AS pre_b
     FROM mainnet.fct_block_head FINAL
     WHERE slot_start_date_time >= '2026-04-25 00:00:00'
       AND slot_start_date_time <  '2026-05-02 00:00:00'
       AND block_total_bytes_compressed IS NOT NULL
+      AND block_total_bytes IS NOT NULL
 ),
 seen AS (
     SELECT slot, block_root, seen_slot_start_diff
@@ -34,6 +37,7 @@ joined AS (
     SELECT
         s.seen_slot_start_diff - fs.t_first AS dispersion_ms,
         b.post_b / 1024 AS post_kb,
+        b.pre_b  / 1024 AS pre_kb,
         if((s.slot, s.block_root) IN (SELECT slot, block_root FROM mev_blocks), 'mev', 'local') AS source
     FROM seen AS s
     INNER JOIN first_seen AS fs ON s.slot = fs.slot AND s.block_root = fs.block_root
@@ -62,6 +66,7 @@ SELECT
         post_kb < 144, 128, post_kb < 160, 144, post_kb < 192, 160, post_kb < 224, 192,
         224
     ) AS sort_key,
+    round(avg(pre_kb), 0) AS avg_pre_kb,
     countIf(source = 'mev')   AS mev_n,
     countIf(source = 'local') AS local_n,
     round(quantileIf(0.5)(dispersion_ms,  source = 'mev'),   0) AS mev_p50,

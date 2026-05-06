@@ -20,20 +20,22 @@ tags:
 
     // Per-source row projections for the two lookup tables
     $: mev_rows = (dispersion_lookup || []).map(d => ({
-        size_bin: d.size_bin,
-        n:        d.mev_n,
-        p50:      d.mev_p50,
-        p75:      d.mev_p75,
-        p95:      d.mev_p95,
-        p99:      d.mev_p99,
+        size_bin:    d.size_bin,
+        avg_pre_kb:  d.avg_pre_kb,
+        n:           d.mev_n,
+        p50:         d.mev_p50,
+        p75:         d.mev_p75,
+        p95:         d.mev_p95,
+        p99:         d.mev_p99,
     }));
     $: local_rows = (dispersion_lookup || []).map(d => ({
-        size_bin: d.size_bin,
-        n:        d.local_n,
-        p50:      d.local_p50,
-        p75:      d.local_p75,
-        p95:      d.local_p95,
-        p99:      d.local_p99,
+        size_bin:    d.size_bin,
+        avg_pre_kb:  d.avg_pre_kb,
+        n:           d.local_n,
+        p50:         d.local_p50,
+        p75:         d.local_p75,
+        p95:         d.local_p95,
+        p99:         d.local_p99,
     }));
 
     // ---- Chart 1: Naive view (ready time vs size from slot start) ----
@@ -218,23 +220,25 @@ Per-bin dispersion percentiles. Cell colour shades light to dark by latency. The
 **MEV-Boost** (95% of mainnet)
 
 <DataTable data={mev_rows} rows=15>
-    <Column id="size_bin" title="Post-snappy size" />
-    <Column id="n"        title="n observations" fmt="num0" align="right" />
-    <Column id="p50"      title="p50 (ms)" fmt="num0" contentType="colorscale" scaleColor="#3b82f6" />
-    <Column id="p75"      title="p75 (ms)" fmt="num0" contentType="colorscale" scaleColor="#3b82f6" />
-    <Column id="p95"      title="p95 (ms)" fmt="num0" contentType="colorscale" scaleColor="#3b82f6" />
-    <Column id="p99"      title="p99 (ms)" fmt="num0" contentType="colorscale" scaleColor="#3b82f6" />
+    <Column id="size_bin"   title="Post-snappy size" />
+    <Column id="avg_pre_kb" title="≈ pre-snappy (KB)" fmt="num0" align="right" />
+    <Column id="n"          title="n observations" fmt="num0" align="right" />
+    <Column id="p50"        title="p50 (ms)" fmt="num0" contentType="colorscale" scaleColor="#3b82f6" />
+    <Column id="p75"        title="p75 (ms)" fmt="num0" contentType="colorscale" scaleColor="#3b82f6" />
+    <Column id="p95"        title="p95 (ms)" fmt="num0" contentType="colorscale" scaleColor="#3b82f6" />
+    <Column id="p99"        title="p99 (ms)" fmt="num0" contentType="colorscale" scaleColor="#3b82f6" />
 </DataTable>
 
 **Local** (5% of mainnet)
 
 <DataTable data={local_rows} rows=15>
-    <Column id="size_bin" title="Post-snappy size" />
-    <Column id="n"        title="n observations" fmt="num0" align="right" />
-    <Column id="p50"      title="p50 (ms)" fmt="num0" contentType="colorscale" scaleColor="#16a34a" />
-    <Column id="p75"      title="p75 (ms)" fmt="num0" contentType="colorscale" scaleColor="#16a34a" />
-    <Column id="p95"      title="p95 (ms)" fmt="num0" contentType="colorscale" scaleColor="#16a34a" />
-    <Column id="p99"      title="p99 (ms)" fmt="num0" contentType="colorscale" scaleColor="#16a34a" />
+    <Column id="size_bin"   title="Post-snappy size" />
+    <Column id="avg_pre_kb" title="≈ pre-snappy (KB)" fmt="num0" align="right" />
+    <Column id="n"          title="n observations" fmt="num0" align="right" />
+    <Column id="p50"        title="p50 (ms)" fmt="num0" contentType="colorscale" scaleColor="#16a34a" />
+    <Column id="p75"        title="p75 (ms)" fmt="num0" contentType="colorscale" scaleColor="#16a34a" />
+    <Column id="p95"        title="p95 (ms)" fmt="num0" contentType="colorscale" scaleColor="#16a34a" />
+    <Column id="p99"        title="p99 (ms)" fmt="num0" contentType="colorscale" scaleColor="#16a34a" />
 </DataTable>
 
 Compare any row across the two tables and the percentiles match within tens of milliseconds, well under the per-bin spread.
