@@ -144,7 +144,7 @@ select * from xatu_cbt.bsp_dispersion_lookup
 
 ## Question
 
-When a block on Ethereum mainnet gets bigger, what actually slows its dissemination across the network? Is it the gossipsub mesh that takes longer to spread the block byte-for-byte, or is it builder behavior, with bigger blocks getting released later in the slot for unrelated reasons?
+When a block on Ethereum mainnet gets bigger, how much longer does it actually take to disseminate across the gossipsub mesh? And do MEV-Boost relays disperse blocks any faster than a regular proposer publishing into its own mesh?
 
 </Section>
 
@@ -154,12 +154,7 @@ When a block on Ethereum mainnet gets bigger, what actually slows its disseminat
 
 A block is propagated on the consensus-layer p2p network as one **gossipsub** message: the full signed beacon block, SSZ-encoded then snappy-compressed (`ssz_snappy`). The compressed payload is what hits the wire. Every node in the gossipsub mesh receives the bytes, validates the message at the consensus level (proposer signature, parent seen, slot, etc.), and forwards it to its peers. Per the [bellatrix p2p-interface spec](https://github.com/ethereum/consensus-specs/blob/dev/specs/bellatrix/p2p-interface.md), execution-payload validity is **not** required for gossip propagation, so `newPayload` doesn't sit in the dissemination hot path. This investigation focuses on dissemination only.
 
-Two timing concepts matter here, and they are easy to confuse:
-
-- **Block release**: when a block first appears anywhere on the network. For a locally-built block this is `engine_getPayload` followed by sign and publish. For a MEV-Boost block the proposer waits for relay deadlines, signs the header from the relay's bid, and the relay broadcasts. These produce different release-time distributions.
-- **Mesh dispersion**: how long it takes for a block, once on the network, to reach the rest of the nodes via gossipsub. This is the bandwidth and topology question.
-
-`seen_slot_start_diff` (when a sentry first observes a block) measures the sum of these two. They have different drivers and they should be looked at separately.
+**A note on the time origin.** When a sentry first sees a block over gossipsub, two things happened: the block was *released* into the network at some point in the slot, then it *dispersed* through the gossipsub mesh until it reached the sentry. Measuring from slot start mixes these. The release-into-network time is dominated by builder behavior (especially MEV-Boost relay deadlines, which cluster blocks into late-slot cohorts), not by the network. So to study the network we use `t_first`, the earliest sighting of the block by *any* Xatu sentry, as the time origin and look at how long after that each individual sentry saw it. This isolates pure mesh dispersion from release timing.
 
 The data window is **2026-04-25 to 2026-05-02** (7 days, 50,318 mainnet blocks). Block-source classification uses `fct_block_mev`: any block delivered through a tracked relay is tagged as MEV-Boost; everything else is treated as locally-built.
 
@@ -186,39 +181,35 @@ MEV-Boost is 95% of the window. Locally-built blocks are smaller (70 vs 165 KB p
 
 ### When measured from slot start
 
-The simplest framing: pick all `seen_slot_start_diff` observations from individual-class nodes (~92 worldwide sentries seeing each slot), bin by post-snappy block size, and plot the median, p95, and p99.
+For reference, here is the naive view: bin every individual-class node observation by post-snappy block size and plot the median, p95, and p99 of `seen_slot_start_diff`.
 
 <SqlSource source="xatu_cbt" query="bsp_naive_view" />
 
 <ECharts config={naiveConfig} height="400px" />
 
-A 9 KB block reaches the median individual node at 1505 ms; a 238 KB block at 2122 ms. That works out to roughly **3.7 ms per post-snappy KB at p50**. The 4-second attestation deadline sits comfortably above the p99 line for every size on mainnet today.
-
-This view is real, but it sums two unrelated effects. Most of the slope vanishes once we split them.
+A 9 KB block reaches the median individual node at 1505 ms; a 238 KB block at 2122 ms. That works out to roughly **3.7 ms per post-snappy KB at p50**. The 4-second attestation deadline sits comfortably above the p99 line for every size on mainnet today. This is what people usually quote, but it includes builder release timing — see the methodology note in the background for why we move the origin to `t_first` for the rest of the investigation.
 
 ### When measured from first sighting
 
-For each block, take `t_first` = the earliest `seen_slot_start_diff` across **all** Xatu sentries. Subtract it from each individual-node observation. What remains is pure mesh dispersion: how long after the block first appeared on the network did each sentry actually see it? Doing this strips out the slot-position component, which is dominated by builder release timing rather than network behavior (regressing release time against post-snappy size on the full window gives ~3.0 ms per post-snappy KB at p50, so roughly 80% of the slope from the previous chart was builders releasing larger blocks later, not the network being slower at moving them).
+Subtract `t_first` per block from each individual-node observation. What remains is pure mesh dispersion.
 
 <SqlSource source="xatu_cbt" query="bsp_pure_dispersion" />
 
 <ECharts config={dispersionConfig} height="400px" />
 
-The numbers are much smaller. Median dispersion ranges from 104 ms (9 KB) to 348 ms (~238 KB). p99 ranges from 427 ms to 1248 ms. The slope is about **0.9 ms per post-snappy KB at p50**, **2.5 ms/KB at p95**, **3.7 ms/KB at p99**. That is a quarter of the apparent slope from the slot-start framing.
+The numbers are much smaller. Median dispersion ranges from 104 ms (9 KB) to 348 ms (~238 KB). p99 ranges from 427 ms to 1248 ms. The slope is about **0.9 ms per post-snappy KB at p50**, **2.5 ms/KB at p95**, **3.7 ms/KB at p99**.
 
 Within any single bin the spread is large. Most of the propagation variance comes from per-pair network conditions like peering, geography and link latency, not from block size. The size effect is real and monotonic, but it sits on top of much larger noise from network topology.
 
 ### When comparing MEV-Boost to locally-built
 
-If the bigger-block-slows-propagation effect were really about gossipsub bandwidth, it should look the same regardless of who built the block. If it were tied to the build path (signature timing, header-then-payload disclosure on MEV), MEV-Boost and local should diverge.
+A locally-built block enters the network through the proposer's own ~8-peer gossipsub mesh and starts spreading hop-by-hop from there. A MEV-Boost block is published by the relay, which is connected to a much larger set of CL nodes and could in principle blast it to many of them at once before gossipsub takes over. If relays are doing that, MEV-Boost blocks should disperse faster from `t_first` than local blocks at the same size, especially in the early percentiles.
 
 <SqlSource source="xatu_cbt" query="bsp_dispersion_lookup" />
 
 <ECharts config={bySourceConfig} height="400px" />
 
-The two p50 lines sit on top of each other. The two p95 lines do too. Mesh dispersion is the same across MEV-Boost and locally-built blocks at every size band, which is what gossipsub does when it is treating the message as an opaque byte stream of size `n`.
-
-So the difference between MEV-Boost and locally-built blocks is fully captured by **when** they enter the network, not how fast they spread once they are there.
+The two p50 lines sit on top of each other. The two p95 lines do too. At every size band, dispersion-from-first-sighting is indistinguishable between the two sources, so relays don't appear to be giving MEV-Boost blocks a head start over the proposer-mesh path that locally-built blocks take. Whatever the relay's peer set looks like, the network sees the same dispersion curve from `t_first` onwards either way.
 
 #### Lookup tables for the simulator
 
@@ -255,9 +246,8 @@ Compare any row across the two tables and the percentiles match within tens of m
 ## Takeaways
 
 - Pure gossip mesh dispersion is small at today's block sizes. p50 fits `132 + 0.93 * post_snappy_KB` ms; p99 fits `655 + 3.66 * post_snappy_KB` ms. A typical 73 KB block at p50 disperses in around **200 ms**; a p99-sized 184 KB block at p99 disperses in around **1330 ms**.
-- Most of the apparent "size hurts propagation" slope is builder release timing, not bandwidth. Roughly **80% of the per-KB slope from slot start** is just larger blocks being released later in the slot, which is an MEV-Boost behavior.
-- The mesh treats MEV-Boost and locally-built blocks the same at every size band. The whole difference between the two source distributions is in `t_first`, not in dispersion.
-- For a simulator that wants to model "how fast does a payload of size X disseminate across mainnet today," use the dispersion lookup table directly. The slot-start framing folds in MEV-Boost relay cohort timing, which is a builder behavior, not a network property.
+- For a simulator that wants to model "how fast does a payload of size X disseminate across mainnet today," use the dispersion lookup table directly.
+- MEV-Boost relays don't appear to give their blocks a wider initial broadcast than the proposer-mesh path that locally-built blocks take. Once a block is on the network, MEV and local disperse at the same rate at every size band.
 - The 4-second attestation deadline is not at risk for any size band currently on mainnet. p99 of mesh dispersion stays under 1.3 seconds after first network sighting for the largest size bin observed (224+ KB post-snappy).
 
 </Section>
