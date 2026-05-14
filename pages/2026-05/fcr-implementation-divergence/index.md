@@ -1,7 +1,7 @@
 ---
 title: FCR Implementation Divergence
 sidebar_position: 2
-description: Two implementations of consensus-specs PR #4747 (Fast Confirmation Rule) disagree on 1.2% of mainnet slots. Tracing the gap back to a non-spec extension in a Teku research branch that adds same-slot parent-vote weight to the safety-threshold discount.
+description: Two implementations of consensus-specs PR #4747 (Fast Confirmation Rule) disagree on 1.2% of mainnet slots. Tracing the gap back to a non-spec extension in a Teku branch that adds same-slot parent-vote weight to the safety-threshold discount.
 date: 2026-05-14T00:00:00Z
 author: samcm
 tags:
@@ -150,7 +150,7 @@ Two independent implementations of consensus-specs [PR #4747](https://github.com
 
 The **Fast Confirmation Rule** (FCR) is a proposed addition to the consensus-specs ([PR #4747](https://github.com/ethereum/consensus-specs/pull/4747)) that lets a node locally **confirm** a block within seconds of the attestation deadline, well ahead of FFG finality.
 
-Two implementations of the rule now exist: **Lighthouse** ([sigp/lighthouse#8951](https://github.com/sigp/lighthouse/pull/8951), tracking PR #4747 from spec) and a **Teku research branch** (the basis for the replay in the [previous FCR investigation](/2026-03/fast-confirmation-rule/)). We ran our Lighthouse-based simulator ([ethpandaops/fcr-simulator](https://github.com/ethpandaops/fcr-simulator)) across **epochs 412000–418139** (195,190 slots), the same range the Teku replay covered. Teku reports a 96.96% confirmation rate on that range; Lighthouse reports 95.81%. This page traces the 1.15 pp gap.
+Two implementations of the rule now exist: **Lighthouse** ([sigp/lighthouse#8951](https://github.com/sigp/lighthouse/pull/8951), tracking PR #4747 from spec) and a **Teku branch**. We ran our Lighthouse-based simulator ([ethpandaops/fcr-simulator](https://github.com/ethpandaops/fcr-simulator)) across **epochs 412000–418139** (195,190 slots) and compared its output against the Teku branch's replay logs over the same range. Teku reports a 96.96% confirmation rate on that range; Lighthouse reports 95.81%. This page traces the 1.15 pp gap.
 
 </Section>
 
@@ -172,13 +172,15 @@ The gap is one-sided. Almost all of it comes from slots Teku confirms that Light
 | Lighthouse confirmed, Teku did not | 143 | 0.07% |
 | **Total** | 195,190 | 100% |
 
-The 143 reverse-disagreement slots are noise: different state snapshots, edge cases on the boundary. The substantive gap is the 2,388 slots Teku is more confident about. That entire bucket is what we need to explain.
+The substantive gap is the 2,388 slots Teku confirms and Lighthouse does not. That entire bucket is what we need to explain.
+
+The 143 reverse-direction slots (Lighthouse confirms, Teku does not) are skewed toward epoch boundaries: 45 of 143 sit at slot offset 0 within their epoch (31.5% vs the 3.1% you would expect at random), and another 21 land within the first four slots of an epoch. Inspecting a sample shows Teku's `updateConfirmationRuleStore` reporting the head correctly but holding `confirmed_slot` one slot behind, consistent with a stricter chain-safety or FFG-conflict check firing at or near epoch transitions. The remainder are scattered mid-epoch and look like genuine edge cases. These 143 slots are not the focus of this investigation but are flagged here because the asymmetry is the opposite of the main 2,388-slot bucket.
 
 ### When comparing the two attestation data sources
 
-The two replays are fed attestations from different sources. Lighthouse reads aggregates from canonical block bodies (capped per Electra at `MAX_ATTESTATIONS_ELECTRA = 8` aggregates per block, proposer-curated). The Teku replay reads from xatu's `libp2p_gossipsub_aggregate_and_proof` filtered to 5 sentry clients (the gossip-pool view). The 1.15 pp could come from either implementation logic, data source, or both.
+The two replays feed FCR from different sources. Our Lighthouse simulator pulls attestations from the **next future canonical block** after each slot, on the assumption that the proposer included the aggregates that were observable at proposal time. That subset is capped per Electra at `MAX_ATTESTATIONS_ELECTRA = 8` aggregates per block. The Teku branch reads aggregates from xatu's `libp2p_gossipsub_aggregate_and_proof` table filtered to 5 sentry clients, which is the gossip-pool view: every aggregate that reached at least one of those sentries, whether or not any block ever included it.
 
-We sampled 299 random slots from the original disagreement window (epochs 412000-418139, December 2025 to January 2026) and counted distinct validators voting for the canonical head from each source. Block side uses `uniqExact(arrayJoin(validators))` over `canonical_beacon_elaborated_attestation`. Gossip side takes the per-committee max popcount of `aggregation_bits`, summed across committees and minus one terminator per committee.
+The 1.15 pp could come from either implementation logic, data source, or both. We sampled 299 random slots from the disagreement window (epochs 412000-418139) and counted distinct validators voting for the canonical head from each source. Block side uses `uniqExact(arrayJoin(validators))` over `canonical_beacon_elaborated_attestation`. Gossip side takes the per-committee max popcount of `aggregation_bits`, summed across committees and minus one terminator per committee, restricted to the 5 sentries.
 
 <ECharts config={sourceCompareConfig} height="180px" />
 
@@ -241,7 +243,7 @@ if parent_slot.saturating_add(1u64) == block_slot {
 
 For slot 78 with parent at slot 77, `77 + 1 == 78`, so the spec function returns 0. There is no empty-slot discount to apply, because there is no empty slot. Lighthouse is doing exactly what the spec says.
 
-The Teku research branch (`ConfirmationRuleUtil.java`, `getSupportDiscount`) does something different:
+The Teku branch (`ConfirmationRuleUtil.java`, `getSupportDiscount`) does something different:
 
 ```java
 UInt64 emptySlotSupport = computeEmptySlotSupportDiscount(...);   // spec-compliant, = 0
@@ -261,9 +263,9 @@ This looks deliberate. A validator that already attested for the parent at the b
 ## Takeaways
 
 - The 1.15 pp gap between Teku (96.96%) and Lighthouse (95.81%) on the same 195,190-slot range is **driven by the implementation logic, not the data source**. Direct comparison on the disagreement window shows the two sources agree to within 0.25% of committee, and the small remaining bias is toward more block-included voters, not fewer.
-- The implementation gap is Teku's non-spec `support_discount` term. Lighthouse matches PR #4747 verbatim; the Teku research branch adds a same-slot parent-vote term that the spec does not define. Across the 2,388 disagreement slots, every "Teku-yes, Lighthouse-no" is explained by Teku's larger discount pulling the safety threshold below support.
+- The implementation gap is Teku's non-spec `support_discount` term. Lighthouse matches PR #4747 verbatim; the Teku branch adds a same-slot parent-vote term that the spec does not define. Across the 2,388 disagreement slots, every "Teku-yes, Lighthouse-no" is explained by Teku's larger discount pulling the safety threshold below support.
 - This is not "Lighthouse is wrong". On PR #4747 as currently written, Lighthouse is spec-correct and the conservative number (~95.8%) is the strict-spec FCR rate on this range.
-- The headline 96.9% from the [previous FCR investigation](/2026-03/fast-confirmation-rule/) includes ~1.15 pp of confirmations that strict-spec FCR would not make. The spec-correct number on the same epoch range is ~95.8%.
+- The Teku branch's headline 96.96% on this range includes ~1.15 pp of confirmations that strict-spec FCR would not make. The spec-correct number on the same epoch range is ~95.81%.
 - The same-slot parent-vote extension is plausibly an **improvement** worth proposing for the spec: validators that voted for the parent at slot N cannot non-equivocatingly support a competing slot-N child, so their weight is fair to discount. It is a coherent tightening, but it needs to be stated and tested as a spec change.
 - Action items: if the Teku branch is meant to track PR #4747 strictly, drop the `parentBlockSupport` term from `getSupportDiscount`. If the extension is the intended design, propose it as a follow-up to PR #4747. Either way, the 12-month FCR run we are producing on [fcr-simulator](https://github.com/ethpandaops/fcr-simulator) is on spec-strict Lighthouse and will report the conservative number.
 
