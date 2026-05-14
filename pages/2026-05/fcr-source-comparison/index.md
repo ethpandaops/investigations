@@ -150,6 +150,69 @@ tags:
             }
         ]
     };
+
+    // MEV-built vs locally-built agg-miss timing.
+    // Built from cross-join: canonical_beacon_block.execution_payload_block_hash matched against mev_relay_proposer_payload_delivered.block_hash.
+    // 1,824 MEV slots (13,991 agg-miss validators with timing), 167 local slots (1,126 agg-miss validators with timing).
+    // 2 slots in the original 1,995-slot sample had no canonical_beacon_block row (proposer missed the slot) and are excluded.
+    const mevSplitBuckets = [
+        { bucket: '0-1s',   mev: 0,     local: 0 },
+        { bucket: '1-2s',   mev: 0,     local: 0 },
+        { bucket: '2-3s',   mev: 0,     local: 0 },
+        { bucket: '3-4s',   mev: 0,     local: 0 },
+        { bucket: '4-5s',   mev: 0,     local: 0 },
+        { bucket: '5-6s',   mev: 4,     local: 0 },
+        { bucket: '6-7s',   mev: 0,     local: 0 },
+        { bucket: '7-8s',   mev: 91,    local: 0 },
+        { bucket: '8-10s',  mev: 10863, local: 1008 },
+        { bucket: '10-12s', mev: 1673,  local: 54 },
+        { bucket: '12-16s', mev: 782,   local: 25 },
+        { bucket: '16-24s', mev: 378,   local: 28 },
+        { bucket: '24s+',   mev: 200,   local: 11 }
+    ];
+    const mevTotal = mevSplitBuckets.reduce((s,d) => s + d.mev, 0);
+    const localTotal = mevSplitBuckets.reduce((s,d) => s + d.local, 0);
+
+    $: mevSplitHistConfig = {
+        title: { text: 'Agg-miss subnet first-seen: MEV-built (n=13,991) vs locally-built (n=1,126)', left: 'center', textStyle: { fontSize: 13 } },
+        tooltip: {
+            trigger: 'axis',
+            axisPointer: { type: 'shadow' },
+            formatter: (params) => {
+                let html = `<b>${params[0].axisValue}</b><br/>`;
+                params.forEach(p => {
+                    const total = p.seriesName.startsWith('MEV') ? mevTotal : localTotal;
+                    html += `${p.marker} ${p.seriesName}: ${Number(p.value).toLocaleString()}% (${Math.round(p.value*total/100).toLocaleString()} validators)<br/>`;
+                });
+                return html;
+            }
+        },
+        legend: { top: 28 },
+        grid: { left: 80, right: 80, top: 70, bottom: 60 },
+        xAxis: { type: 'category', data: mevSplitBuckets.map(d => d.bucket), name: 'subnet first-seen bucket', nameLocation: 'center', nameGap: 30 },
+        yAxis: { type: 'value', name: '% of agg-misses (group)', nameLocation: 'center', nameGap: 50, max: 100 },
+        series: [
+            {
+                name: 'MEV-built (n=1,824 slots)',
+                type: 'bar',
+                data: mevSplitBuckets.map(d => +(100*d.mev/mevTotal).toFixed(2)),
+                itemStyle: { color: '#7c3aed' }
+            },
+            {
+                name: 'Locally-built (n=167 slots)',
+                type: 'bar',
+                data: mevSplitBuckets.map(d => +(100*d.local/localTotal).toFixed(2)),
+                itemStyle: { color: '#f59e0b' },
+                markLine: {
+                    silent: true,
+                    symbol: 'none',
+                    label: { formatter: '8s deadline', position: 'insideEndTop', fontSize: 11, color: '#374151' },
+                    lineStyle: { color: '#374151', type: 'dashed' },
+                    data: [{ xAxis: '8-10s' }]
+                }
+            }
+        ]
+    };
 </script>
 
 <PageMeta
@@ -367,6 +430,42 @@ The verdict: hypothesis 1 wins by an order of magnitude. The bulk of validators 
 
 This sharpens the topic-choice claim from the 5-slot check. Switching to the single-attestation topic doesn't just see "more" voters; it sees the validators who showed up to vote between 8 and 12 seconds into the slot, after the aggregator deadline closed. A block proposer's view is closer to "subnet attestation, no time bound" than to "aggregate-and-proof gossip". For replaying live aggregator-and-proof behavior the agg topic is the right source; for matching what makes it into the canonical block the subnet topic is the right source.
 
+### When splitting by MEV builder
+
+Block proposers don't all run the same infrastructure. MEV-relay builders run dedicated nodes that subscribe to every attestation subnet, and they have a financial incentive to capture every last attestation they can fit. Locally-built blocks come from the proposer's own consensus client, which is typically subscribed to a small subset of subnets and pulls late attestations only from the gossip mesh it sees. If builders pull more aggressively than a local proposer, MEV-built blocks should show a larger block-minus-agg surplus per slot and a heavier tail of post-deadline subnet first-seen times among their agg-misses.
+
+To classify, we joined each sample slot's canonical `execution_payload_block_hash` from `canonical_beacon_block` to `mev_relay_proposer_payload_delivered.block_hash` across every tracked relay. A slot was tagged "MEV-built" if a delivered payload's block hash matched the canonical execution payload, and "locally-built" otherwise. 1,824 slots (91.4%) were MEV-built across 8 relays (Ultra Sound, BloXroute Max Profit, Titan, Aestus, BloXroute Regulated, Agnostic Gnosis, EthGas, Flashbots), 167 were locally-built, and 4 slots were unclassifiable (2 had no canonical block row, the other 2 were the canonical-block-missing pair already excluded from the agg-miss timing data).
+
+Per-slot:
+
+| Metric | MEV-built (n=1,824) | Locally-built (n=167) |
+|---|---:|---:|
+| mean block_minus_agg | 7.77 | 6.84 |
+| median block_minus_agg | 1 | 0 |
+| agg-miss validators with timing | 13,991 | 1,126 |
+| agg-misses with subnet first-seen > 8s | 99.30% | 100.00% |
+| agg-misses with subnet first-seen > 12s | 9.72% | 5.68% |
+
+Subnet first-seen percentiles for the agg-miss set:
+
+| Percentile | MEV-built | Locally-built |
+|---|---:|---:|
+| p50 | 8,816 ms | 8,708 ms |
+| p75 | 9,680 ms | 9,338 ms |
+| p90 | 11,873 ms | 10,179 ms |
+| p95 | 15,272 ms | 12,826 ms |
+| p99 | 29,882 ms | 23,979 ms |
+
+<ECharts config={mevSplitHistConfig} height="380px" />
+
+Two things stand out.
+
+First: the headline "% of agg-misses past the 8s deadline" is essentially 100% in both groups. The 93.6% from the prior section becomes 99.3% (MEV) and 100.0% (local) once we restrict to slots where MEV classification is even possible. The 6.4 pp gap was driven by 2 outlier slots where the canonical block was missing from xatu (so the agg-miss set was contaminated by what are effectively block-side artifacts). On the cleanly classified sample, virtually every agg-miss with subnet timing arrived after the aggregator deadline closed, regardless of who built the block. The late-arrival mechanism is structural, not a builder choice.
+
+Second: among the validators who arrived very late (post-12 seconds and beyond), MEV-built blocks pull in proportionally more of them. The MEV p90 of agg-miss first-seen is 11.9s vs 10.2s for local; p99 is 29.9s vs 24.0s. 9.72% of MEV agg-misses arrived more than 12 seconds into the slot, versus 5.68% of local agg-misses. MEV-built blocks also carry a slightly larger block-minus-agg surplus on average (7.77 vs 6.84). The hypothesis holds in a soft form: builders capture more late voters than local proposers, but the effect is modest, and both groups overwhelmingly source their block-only voters from the post-deadline tail rather than from any "on-time but the aggregator never saw them" failure mode.
+
+A caveat on the local cohort. 167 slots is small enough that the per-bucket counts (e.g. 11 validators in the 24s+ bucket) sit at single-slot resolution. The percentiles up to p75 line up closely with the MEV group; only the upper tail diverges. The block-minus-agg mean difference of 0.93 voters/slot has visible per-slot noise of about ±10 voters, so the population-mean confidence band is loose.
+
 </Section>
 
 <Section type="takeaways">
@@ -378,5 +477,6 @@ This sharpens the topic-choice claim from the 5-slot check. Switching to the sin
 - Within the aggregate-and-proof-only world, the gossip pipeline in this window is effectively a 1-sentry pipeline. Either utility sentry alone gives mean Jaccard 0.99968 against block-included. The 3 subnet-attached sentries were only up for a third of slots and add nothing when the utilities are up. The second utility sentry also adds nothing.
 - Weight-by-effective-balance tracks the count delta closely. Median delta is 32 ETH = 1 plain validator. Compounded validators are mildly over-represented among block-only (0.86% vs 0.47% baseline) but the absolute share is small enough that the weight picture matches the count picture.
 - Disagreement slots show a marginally larger source delta than agreement slots (mean 10.1 vs 9.3 block-only voters) but the distributions overlap heavily. The data-source gap is not what carved the FCR implementation disagreement, and the gap itself is now traceable: aggregate-and-proof gossip is a structurally on-time view; block-included and single-attestation gossip are not.
+- Splitting by builder type (1,824 MEV-built vs 167 locally-built slots in the 1,991-slot classifiable subset) shows the late-arrival mechanism is structural, not a builder-strategy artifact. Both groups push ~100% of their agg-misses past the 8s deadline. MEV-built blocks do pull in slightly more late tail (p90 first-seen 11.9s vs 10.2s, mean block-minus-agg 7.77 vs 6.84) but the bulk of the block-minus-agg surplus is post-deadline regardless of who built the block.
 
 </Section>
