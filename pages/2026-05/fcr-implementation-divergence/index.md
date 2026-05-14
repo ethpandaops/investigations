@@ -174,9 +174,7 @@ The gap is one-sided. Almost all of it comes from slots Teku confirms that Light
 | Lighthouse confirmed, Teku did not | 143 | 0.07% |
 | **Total** | 195,190 | 100% |
 
-The substantive gap is the 2,388 slots Teku confirms and Lighthouse does not. That entire bucket is what we need to explain.
-
-The 143 reverse-direction slots (Lighthouse confirms, Teku does not) are skewed toward epoch boundaries: 45 of 143 sit at slot offset 0 within their epoch (31.5% vs the 3.1% you would expect at random), and another 21 land within the first four slots of an epoch. Inspecting a sample shows Teku's `updateConfirmationRuleStore` reporting the head correctly but holding `confirmed_slot` one slot behind, consistent with a stricter chain-safety or FFG-conflict check firing at or near epoch transitions. The remainder are scattered mid-epoch and look like genuine edge cases. These 143 slots are not the focus of this investigation but are flagged here because the asymmetry is the opposite of the main 2,388-slot bucket.
+The substantive gap is the 2,388 slots Teku confirms and Lighthouse does not. That bucket is what we are going to investigate here. The 143 reverse-direction slots (Lighthouse confirms, Teku does not) are a separate, smaller asymmetry that we are not investigating in this page.
 
 ### When comparing the two attestation data sources
 
