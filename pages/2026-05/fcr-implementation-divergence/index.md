@@ -262,9 +262,5 @@ Teku adds a second term: `parentBlockSupport`, evaluated **at the block's own sl
 
 - The 1.15 pp gap between Teku (96.96%) and Lighthouse (95.81%) on the same 195,190-slot range is **driven by the implementation logic, not the data source**. Direct comparison on the disagreement window shows the two sources agree to within 0.25% of committee, and the small remaining bias is toward more block-included voters, not fewer.
 - The implementation gap is Teku's non-spec `support_discount` term. Lighthouse matches PR #4747 verbatim; the Teku branch adds a same-slot parent-vote term that the spec does not define. Across the 2,388 disagreement slots, every "Teku-yes, Lighthouse-no" is explained by Teku's larger discount pulling the safety threshold below support.
-- This is not "Lighthouse is wrong". On PR #4747 as currently written, Lighthouse is spec-correct and the conservative number (~95.8%) is the strict-spec FCR rate on this range.
-- The Teku branch's headline 96.96% on this range includes ~1.15 pp of confirmations that strict-spec FCR would not make. The spec-correct number on the same epoch range is ~95.81%.
-- The same-slot parent-vote extension is plausibly an **improvement** worth proposing for the spec: validators that voted for the parent at slot N cannot non-equivocatingly support a competing slot-N child, so their weight is fair to discount. It is a coherent tightening, but it needs to be stated and tested as a spec change.
-- Action items: if the Teku branch is meant to track PR #4747 strictly, drop the `parentBlockSupport` term from `getSupportDiscount`. If the extension is the intended design, propose it as a follow-up to PR #4747. Either way, the 12-month FCR run we are producing on [fcr-simulator](https://github.com/ethpandaops/fcr-simulator) is on spec-strict Lighthouse and will report the conservative number.
 
 </Section>
