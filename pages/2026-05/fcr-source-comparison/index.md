@@ -212,7 +212,7 @@ Weight follows count closely enough that the count picture holds.
 
 ### When dropping sentries
 
-The 5 sentries do not contribute equally. Each utility sentry (`utility-mainnet-lighthouse-geth-001` and `-003`) was up for every one of the 800 slots and observed every committee in every slot. The other 3 sentries (`xatu-sentry-sfo3-mainnet-lighthouse-nethermind-1d`, `xatu-tysm-ams3-mainnet-003-subnets-0-1`, `xatu-tysm-ams3-mainnet-005-subnets-0-1`) only emitted aggregate-and-proof rows for 255 of the 800 slots (32%). When they were up, they observed every committee.
+The 5 sentries do not contribute equally. Each utility sentry (`utility-mainnet-lighthouse-geth-001` and `-003`) was up for every one of the 800 slots and observed at least one aggregate from every one of the 64 committees in every slot. They did not observe every validator: each utility sentry alone captures about 99.97% of the validators that the canonical block records as voting for the head, with a mean shortfall of ~9.7 voters per slot. The other 3 sentries (`xatu-sentry-sfo3-mainnet-lighthouse-nethermind-1d`, `xatu-tysm-ams3-mainnet-003-subnets-0-1`, `xatu-tysm-ams3-mainnet-005-subnets-0-1`) only emitted aggregate-and-proof rows for 255 of the 800 slots (32%). When they were up, they also covered every committee, but their voter sets were a subset of the utility sentries'.
 
 <ECharts config={sentryCumulativeConfig} height="280px" />
 
@@ -224,7 +224,7 @@ The 5 sentries do not contribute equally. Each utility sentry (`utility-mainnet-
 | subnet-attached only (3) | 9,774.1 | 0.32238 | 20,422 |
 | all 5 sentries | 30,186.8 | 0.99968 | 9.7 |
 
-A single utility sentry delivers the entire effective gossip-pool view. Adding the second utility sentry adds nothing (their voter sets are identical when both are up). Adding the 3 subnet-attached sentries on top of the utilities also adds nothing; they are a strict subset.
+A single utility sentry delivers the same gossip-pool view that all 5 sentries deliver in aggregate. The second utility sentry adds nothing (their voter sets are identical when both are up). The 3 subnet-attached sentries add nothing on top of the utilities; they are a strict subset of what either utility sees. The "5-sentry pipeline" is operationally a 1-sentry pipeline as long as either utility is up. Note that this 1-utility-sentry view still falls short of the block-included view by ~9.7 voters per slot, so being inside one utility sentry's voter set is not the same as being inside the canonical chain.
 
 If the gossip pipeline ran with only the 3 subnet-attached sentries, the picture flips: mean Jaccard against block-included falls to 0.32, mean block-only count is 20,422 per slot. That is because those 3 sentries were only up for 1 in 3 slots in this window; for the other slots the gossip-pool view is empty.
 
