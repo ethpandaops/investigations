@@ -145,16 +145,9 @@ Two independent implementations of consensus-specs [PR #4747](https://github.com
 
 ## Background
 
-The **Fast Confirmation Rule** (FCR) is a proposed addition to the consensus-specs ([PR #4747](https://github.com/ethereum/consensus-specs/pull/4747)) that lets a node locally **confirm** a block within seconds of the attestation deadline, well ahead of FFG finality. The [previous FCR investigation](/2026-03/fast-confirmation-rule/) reported a 96.9% confirmation rate on a 131-day mainnet window using a simplified head-vote proxy.
+The **Fast Confirmation Rule** (FCR) is a proposed addition to the consensus-specs ([PR #4747](https://github.com/ethereum/consensus-specs/pull/4747)) that lets a node locally **confirm** a block within seconds of the attestation deadline, well ahead of FFG finality.
 
-Two implementations of the rule now exist:
-
-- **Lighthouse**: [sigp/lighthouse#8951](https://github.com/sigp/lighthouse/pull/8951), a from-spec implementation tracking PR #4747.
-- **Teku research branch**: the basis for the Teku-based replay in the previous FCR investigation.
-
-We built a simulator on top of the Lighthouse implementation ([ethpandaops/fcr-simulator](https://github.com/ethpandaops/fcr-simulator)) and ran it across **epochs 412000–418139**, the same 195,190-slot range the Teku replay covered. Same window, two implementations. The goal here is to characterise where they disagree and why.
-
-There's a second axis to keep in mind. The two implementations are also fed attestations from different sources. The Lighthouse simulator reads attestations out of canonical block bodies, which is a proposer-curated subset, capped per Electra by `MAX_ATTESTATIONS_ELECTRA = 8` aggregates per block. The Teku research replay reads aggregates from the `libp2p_gossipsub_aggregate_and_proof` table in xatu, filtered to a small set of sentry clients (the gossip-pool view). The disagreement we are explaining is therefore "implementation logic plus data source", and we want to know how much of the 1.15 pp comes from each.
+Two implementations of the rule now exist: **Lighthouse** ([sigp/lighthouse#8951](https://github.com/sigp/lighthouse/pull/8951), tracking PR #4747 from spec) and a **Teku research branch** (the basis for the replay in the [previous FCR investigation](/2026-03/fast-confirmation-rule/)). We ran our Lighthouse-based simulator ([ethpandaops/fcr-simulator](https://github.com/ethpandaops/fcr-simulator)) across **epochs 412000–418139** (195,190 slots), the same range the Teku replay covered. Teku reports a 96.96% confirmation rate on that range; Lighthouse reports 95.81%. This page traces the 1.15 pp gap.
 
 </Section>
 
@@ -164,7 +157,7 @@ There's a second axis to keep in mind. The two implementations are also fed atte
 
 ### When counting agreements and disagreements
 
-Over the 195,190-slot overlap (epochs 412000–418139), Teku reports a 96.96% confirmation rate; Lighthouse reports 95.81%. The 1.15 percentage point gap is real and one-sided. Almost all of it comes from slots Teku confirms that Lighthouse does not.
+The gap is one-sided. Almost all of it comes from slots Teku confirms that Lighthouse does not.
 
 <ECharts config={overlapConfig} height="380px" />
 
@@ -180,10 +173,12 @@ The 143 reverse-disagreement slots are noise: different state snapshots, edge ca
 
 ### When comparing the two attestation data sources
 
-Before chasing the implementation logic we wanted to put a number on the data-source axis. The two replays are seeing different attestation sets:
+There is a second axis to consider before chasing the implementation logic. The two replays are fed attestations from different sources:
 
-- **Lighthouse simulator**: attestations extracted from canonical block bodies. Each block carries at most `MAX_ATTESTATIONS_ELECTRA = 8` aggregates, chosen by the proposer from whatever they had locally at proposal time.
+- **Lighthouse simulator**: attestations extracted from canonical block bodies. Each block carries at most `MAX_ATTESTATIONS_ELECTRA = 8` aggregates, chosen by the proposer from whatever they had locally at proposal time. This is a proposer-curated subset.
 - **Teku-based replay**: aggregates from xatu's `libp2p_gossipsub_aggregate_and_proof` table, filtered to a small set of sentry clients. This is the gossip-pool view: every aggregate that reached at least one of those sentries, regardless of whether any block ever included it.
+
+The disagreement is therefore "implementation logic plus data source", and we want to know how much of the 1.15 pp comes from each.
 
 The original disagreement window (epochs 412000–418139, December 2025 to January 2026) is now outside xatu's gossip-table retention (~43 days), so we cannot redo the comparison on the exact slots that drove the 1.15 pp gap. Instead we ran the comparison on a recent **50,400-slot window** (epochs 445837–447412, slots 14,266,799–14,317,198, 2026-05-06 to 2026-05-13), well within retention.
 
