@@ -1,7 +1,7 @@
 ---
 title: FCR source comparison deep dive
 sidebar_position: 1
-description: Follow-up to the FCR implementation divergence investigation. Compares the block-included and gossip-pool attestation sources on 800 sampled slots from the same window, with per-slot Jaccard, effective-balance weight, per-sentry contribution, and disagreement-vs-agreement deltas.
+description: Follow-up to the FCR implementation divergence investigation. Compares the block-included and gossip-pool attestation sources on 800 sampled slots from the same window, with per-slot Jaccard, effective-balance weight, per-sentry contribution, and disagreement-vs-agreement deltas. Adds a 1,995-slot timing analysis showing the aggregate-and-proof shortfall is dominated by validators whose subnet attestations arrived after the 8-second aggregation deadline.
 date: 2026-05-14T01:00:00Z
 author: samcm
 tags:
@@ -84,6 +84,72 @@ tags:
         { metric: 'p90 count delta', disagreement: 15, agreement: 11 },
         { metric: 'mean Jaccard',    disagreement: 0.99966, agreement: 0.99970 }
     ];
+
+    // Subnet first-seen timing distribution: agg-hits vs agg-misses
+    // 1,995 sample slots, 60,991,928 hit voter-events, 16,049 miss voter-events
+    const timingBuckets = [
+        { bucket: '0-1s',     hit: 41801,    miss: 0 },
+        { bucket: '1-2s',     hit: 2156981,  miss: 0 },
+        { bucket: '2-3s',     hit: 11475059, miss: 0 },
+        { bucket: '3-4s',     hit: 11221834, miss: 0 },
+        { bucket: '4-5s',     hit: 21472462, miss: 107 },
+        { bucket: '5-6s',     hit: 11956328, miss: 235 },
+        { bucket: '6-7s',     hit: 2412874,  miss: 501 },
+        { bucket: '7-8s',     hit: 222017,   miss: 176 },
+        { bucket: '8-10s',    hit: 20363,    miss: 11871 },
+        { bucket: '10-12s',   hit: 578,      miss: 1735 },
+        { bucket: '12-16s',   hit: 3913,     miss: 807 },
+        { bucket: '16-24s',   hit: 1270,     miss: 406 },
+        { bucket: '24s+',     hit: 6448,     miss: 211 }
+    ];
+    const hitTotal = timingBuckets.reduce((s,d) => s + d.hit, 0);
+    const missTotal = timingBuckets.reduce((s,d) => s + d.miss, 0);
+
+    $: timingHistConfig = {
+        title: { text: 'Subnet first-seen propagation_slot_start_diff: agg-hits vs agg-misses', left: 'center', textStyle: { fontSize: 13 } },
+        tooltip: {
+            trigger: 'axis',
+            axisPointer: { type: 'shadow' },
+            formatter: (params) => {
+                let html = `<b>${params[0].axisValue}</b><br/>`;
+                params.forEach(p => {
+                    const total = p.seriesName.includes('hits') ? hitTotal : missTotal;
+                    html += `${p.marker} ${p.seriesName}: ${Number(p.value).toLocaleString()} (${(100*p.value/total).toFixed(2)}%)<br/>`;
+                });
+                return html;
+            }
+        },
+        legend: { top: 28 },
+        grid: { left: 80, right: 80, top: 70, bottom: 60 },
+        xAxis: { type: 'category', data: timingBuckets.map(d => d.bucket), name: 'subnet first-seen bucket', nameLocation: 'center', nameGap: 30 },
+        yAxis: [
+            { type: 'value', name: '% of agg-hits', nameLocation: 'center', nameGap: 50, position: 'left', max: 40 },
+            { type: 'value', name: '% of agg-misses', nameLocation: 'center', nameGap: 50, position: 'right', max: 80 }
+        ],
+        series: [
+            {
+                name: 'agg-hits (n=61.0M)',
+                type: 'bar',
+                yAxisIndex: 0,
+                data: timingBuckets.map(d => +(100*d.hit/hitTotal).toFixed(3)),
+                itemStyle: { color: '#16a34a' }
+            },
+            {
+                name: 'agg-misses (n=16,049)',
+                type: 'bar',
+                yAxisIndex: 1,
+                data: timingBuckets.map(d => +(100*d.miss/missTotal).toFixed(3)),
+                itemStyle: { color: '#dc2626' },
+                markLine: {
+                    silent: true,
+                    symbol: 'none',
+                    label: { formatter: '8s deadline', position: 'insideEndTop', fontSize: 11, color: '#374151' },
+                    lineStyle: { color: '#374151', type: 'dashed' },
+                    data: [{ xAxis: '8-10s' }]
+                }
+            }
+        ]
+    };
 </script>
 
 <PageMeta
@@ -253,17 +319,53 @@ A natural follow-up: if a single utility sentry sees every committee yet still m
 
 The Teku replay uses only the aggregate-and-proof topic. A subscriber to that topic only sees a validator's vote if (a) an aggregator was selected that included that validator and (b) that aggregator's gossip message reached the sentry. Block proposers subscribe to both topics and additionally pull from their full peer mempool, so they catch every validator.
 
-We re-ran the per-slot delta on five sample slots using the single-attestation topic (`libp2p_gossipsub_beacon_attestation`) filtered to the same 5 sentries:
+A five-slot check on the same 5 sentries hinted that switching to `libp2p_gossipsub_beacon_attestation` closes the gap. To make that conclusion stick, we re-ran the comparison on 1,995 sampled slots spread across the disagreement window (every ~98th slot, December 6 2025 to January 2 2026), pulled per-validator first-seen times from the subnet topic, decoded `aggregation_bits` from `libp2p_gossipsub_aggregate_and_proof` against `canonical_beacon_committee`, and lined the three sets up per slot.
 
-| Slot | Block | Aggregate-and-proof gossip | Single-attestation gossip | Block − single |
-|---|---:|---:|---:|---:|
-| 13,209,000 | 30,142 | 30,077 | **30,142** | 0 |
-| 13,250,000 | 30,805 | 30,740 | **30,805** | 0 |
-| 13,300,000 | 30,845 | 30,769 | 30,844 | 1 |
-| 13,350,000 | 30,224 | 30,158 | **30,224** | 0 |
-| 13,380,000 | 30,369 | 30,285 | 30,368 | 1 |
+Per slot, mean validators voting canonical head:
 
-The single-attestation topic captures every validator the block sees, on every slot. The ~10-voters-per-slot gap is not a sentry-coverage problem and not a gossip-mesh problem. It is a topic-choice problem: choosing aggregate-and-proof as the single source guarantees a small structural shortfall, because not every validator's vote is guaranteed to be aggregated and gossiped. Subscribing to `beacon_attestation_<subnet>` instead (or in addition) closes the gap.
+| Source | Mean | Median | p90 | p99 | Per-slot gap vs block (mean) |
+|---|---:|---:|---:|---:|---:|
+| Block-included | 30,640 | 30,796 | 30,951 | 31,005 | (baseline) |
+| Subnet single-attestation (5 sentries) | 30,580 | 30,766 | 30,948 | 31,004 | 59.2 |
+| Aggregate-and-proof (5 sentries) | 30,632 | 30,790 | 30,949 | 30,999 | 8.1 |
+
+Aggregate-and-proof on the larger sample still trails block-included by 8.1 voters per slot on average (p90 = 8 voters, p99 = 153). The block-minus-subnet number is dominated by 165 slots where the subnet stream had a broad outage (mean 59.2 includes a max of 30,611). On the remaining 1,830 "clean" slots the block-minus-subnet mean is 3.1 voters per slot vs block-minus-agg 8.4 voters. So in the typical slot the subnet topic does close most of the gap; the 5-slot finding holds at scale.
+
+The mechanism question is the new one. Of the ~8 agg-misses per slot, why didn't the aggregate-and-proof gossip cover them? Three candidate hypotheses:
+
+1. **Late subnet arrival.** The validator's subnet attestation arrived after the 8-second aggregation deadline (4s into the slot for the attestation, 8s into the slot for the aggregator to publish). The aggregator on duty for that subnet had nothing to include.
+2. **Aggregator gossip never reached us.** The validator's subnet attestation was on time, an aggregator covered it, but the resulting aggregate-and-proof message never reached any of the 5 sentries.
+3. **Aggregator didn't include them.** The validator was on time on the subnet, but the chosen aggregator built an aggregate that omitted them (e.g. it picked an earlier overlapping aggregate to gossip).
+
+Across the 1,995 slots we found 16,049 agg-miss validators that the subnet topic *did* observe (so timing is available for each). For each, we take the per-validator min `propagation_slot_start_diff` across the 5 sentries.
+
+<ECharts config={timingHistConfig} height="400px" />
+
+| Percentile | agg-hits subnet first-seen (n=61.0M) | agg-misses subnet first-seen (n=16,049) |
+|---|---:|---:|
+| p25 | 3,113 ms | 8,270 ms |
+| p50 (median) | 4,313 ms | 8,732 ms |
+| p75 | 4,971 ms | 9,507 ms |
+| p90 | 5,513 ms | 11,755 ms |
+| p95 | 5,923 ms | 14,756 ms |
+| p99 | 6,683 ms | 28,911 ms |
+| mean | 4,113 ms | 10,072 ms |
+
+The two distributions barely overlap. Hits cluster in the 3 to 6 second window where validators are *supposed* to attest. Misses cluster after the 8-second aggregation deadline.
+
+| Threshold | % of agg-hits past | % of agg-misses past |
+|---|---:|---:|
+| > 4,000 ms | 59.17% | 100.00% |
+| > 6,000 ms | 4.37% | 97.87% |
+| > 8,000 ms | 0.05% | **93.63%** |
+| > 12,000 ms | 0.02% | 8.87% |
+| > 16,000 ms | 0.01% | 3.83% |
+
+93.6% of the agg-misses with timing data arrived on the subnet *after* the 8-second aggregation deadline. Only 6.4% (1,022 of 16,049) arrived in time and still failed to make any aggregate-and-proof message we observed. A further 189 agg-misses across the 1,995 slots never appeared on the subnet at any sentry yet were still in the canonical block, which is the only fragment that could be hypothesis 2 or 3 (and the count is tiny: 0.1 per slot).
+
+The verdict: hypothesis 1 wins by an order of magnitude. The bulk of validators that block-included captures but aggregate-and-proof gossip misses are validators whose own subnet attestation arrived too late for an aggregator to include in the on-time aggregate. Block proposers can scoop these up because their inclusion window extends to the next slot's proposal; an aggregate-and-proof subscriber cannot.
+
+This sharpens the topic-choice claim from the 5-slot check. Switching to the single-attestation topic doesn't just see "more" voters; it sees the validators who showed up to vote between 8 and 12 seconds into the slot, after the aggregator deadline closed. A block proposer's view is closer to "subnet attestation, no time bound" than to "aggregate-and-proof gossip". For replaying live aggregator-and-proof behavior the agg topic is the right source; for matching what makes it into the canonical block the subnet topic is the right source.
 
 </Section>
 
@@ -271,9 +373,10 @@ The single-attestation topic captures every validator the block sees, on every s
 
 ## Takeaways
 
-- The ~10-voters-per-slot block-included surplus over aggregate-and-proof gossip is a **gossip-topic-choice artifact**, not a sentry-coverage limit. Switching to the single-attestation gossip topic (`libp2p_gossipsub_beacon_attestation`) with the same 5 sentries closes the gap to 0 or 1 voters per slot across every sample slot tested. A subscriber to aggregate-and-proof only sees a validator's vote if an aggregator covered it and the aggregator's gossip reached the sentry; the single-attestation topic carries every validator's vote directly.
+- The ~10-voters-per-slot block-included surplus over aggregate-and-proof gossip is **dominated by late subnet arrivals**, not by sentry coverage or gossip-mesh failures. Across 1,995 sampled slots and 16,049 agg-miss validators with subnet timing, 93.6% arrived on the subnet *after* the 8-second aggregation deadline. The aggregators on duty had nothing to include; block proposers picked these up later because their inclusion window extends into the next slot.
+- Switching to the single-attestation gossip topic (`libp2p_gossipsub_beacon_attestation`) with the same 5 sentries closes most of the gap. On the 1,830 slots without broad subnet outages, block-minus-subnet falls to 3.1 voters per slot vs block-minus-agg 8.4. A subnet subscriber sees the late attesters that an aggregate-and-proof subscriber cannot.
 - Within the aggregate-and-proof-only world, the gossip pipeline in this window is effectively a 1-sentry pipeline. Either utility sentry alone gives mean Jaccard 0.99968 against block-included. The 3 subnet-attached sentries were only up for a third of slots and add nothing when the utilities are up. The second utility sentry also adds nothing.
 - Weight-by-effective-balance tracks the count delta closely. Median delta is 32 ETH = 1 plain validator. Compounded validators are mildly over-represented among block-only (0.86% vs 0.47% baseline) but the absolute share is small enough that the weight picture matches the count picture.
-- Disagreement slots show a marginally larger source delta than agreement slots (mean 10.1 vs 9.3 block-only voters) but the distributions overlap heavily. The data-source gap is not what carved the FCR implementation disagreement, and now we know that gap itself is closeable by changing topics.
+- Disagreement slots show a marginally larger source delta than agreement slots (mean 10.1 vs 9.3 block-only voters) but the distributions overlap heavily. The data-source gap is not what carved the FCR implementation disagreement, and the gap itself is now traceable: aggregate-and-proof gossip is a structurally on-time view; block-included and single-attestation gossip are not.
 
 </Section>
