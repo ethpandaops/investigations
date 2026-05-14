@@ -254,8 +254,6 @@ return emptySlotSupport.plus(parentBlockSupport);
 
 Teku adds a second term: `parentBlockSupport`, evaluated **at the block's own slot** (`blockSlot, blockSlot`). The spec's `get_support_discount` has no such term. For our example slot, this term returns the weight of the 16,194 parent-voters, which matches the 544,432 ETH delta we observed exactly. The same shape holds on the rest of the 2,388 disagreement slots: every time Teku confirms and Lighthouse does not, it is because Teku's larger discount pulls the safety threshold below support.
 
-This looks deliberate. A validator that already attested for the parent at the block's own slot cannot, without equivocating, then support a competing slot-N child. From an adversary's point of view that weight is "honest unavailable", so it can't be used against the confirmation. Treating it as a discount is a defensible tightening of the safety threshold. But it is not in the current spec text, and it is not in the initial commit of the spec either: the only support_discount the spec defines is the empty-slot one.
-
 </Section>
 
 <Section type="takeaways">
