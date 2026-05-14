@@ -248,8 +248,8 @@ Disagreement slots have a slightly larger source delta (about 0.8 more block-onl
 
 A natural follow-up: if a single utility sentry sees every committee yet still misses ~10 voters per slot, what specifically does the sentry miss? Two gossipsub topics carry attestation data on mainnet:
 
-- `beacon_aggregate_and_proof` — designated aggregators broadcast a single aggregate per committee
-- `beacon_attestation_<subnet>` — every validator broadcasts their individual attestation on their committee's subnet
+- `beacon_aggregate_and_proof`: designated aggregators broadcast a single aggregate per committee
+- `beacon_attestation_<subnet>`: every validator broadcasts their individual attestation on their committee's subnet
 
 The Teku replay uses only the aggregate-and-proof topic. A subscriber to that topic only sees a validator's vote if (a) an aggregator was selected that included that validator and (b) that aggregator's gossip message reached the sentry. Block proposers subscribe to both topics and additionally pull from their full peer mempool, so they catch every validator.
 
