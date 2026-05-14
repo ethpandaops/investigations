@@ -601,16 +601,24 @@
 			-webkit-overflow-scrolling: touch !important;
 		}
 
-		/* Reduce main content padding on mobile */
+		/* Main page gutter on mobile — ~16px each side keeps text off the screen edge */
 		:global(main) {
-			padding-left: 0.5rem !important;
-			padding-right: 0.5rem !important;
+			padding-left: 1rem !important;
+			padding-right: 1rem !important;
 		}
 
 		/* Content article max-width on mobile */
 		:global(article) {
 			padding-left: 0 !important;
 			padding-right: 0 !important;
+		}
+
+		/* Bump body text & line-height on mobile for comfortable reading.
+		   Apple HIG body is 17pt; Material is 16dp — 16-17px is the floor. */
+		:global(article p.markdown),
+		:global(article li.markdown) {
+			font-size: 1rem !important;
+			line-height: 1.65 !important;
 		}
 	}
 </style>

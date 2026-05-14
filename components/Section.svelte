@@ -17,15 +17,53 @@
         border-left: 3px solid var(--color-base-300, #ddd);
     }
 
-    @media (max-width: 640px) {
-        .section-wrapper {
-            padding-left: 0.75rem;
-            margin: 1.5rem 0;
-        }
-    }
-
     .section-inner {
         padding: 0.5rem 0;
+    }
+
+    @media (max-width: 640px) {
+        .section-wrapper {
+            padding-left: 0.625rem;
+            margin: 1.75rem 0;
+            border-left-width: 2px;
+        }
+
+        .section-wrapper[data-section-type="question"],
+        .section-wrapper[data-section-type="takeaways"] {
+            border-left-width: 3px;
+        }
+
+        .section-inner {
+            padding: 0.25rem 0;
+        }
+
+        .section-wrapper :global(h2.markdown:first-child) {
+            font-size: 0.75rem;
+            margin-bottom: 1rem;
+        }
+
+        .section-wrapper[data-section-type="question"] :global(p.markdown) {
+            font-size: 1.125rem;
+            line-height: 1.55;
+        }
+
+        .section-wrapper[data-section-type="background"] :global(p.markdown) {
+            font-size: 1rem;
+            line-height: 1.65;
+        }
+
+        .section-wrapper[data-section-type="investigation"] :global(h3.markdown) {
+            font-size: 1.0625rem;
+            margin-top: 1.5rem;
+            margin-bottom: 0.625rem;
+        }
+
+        .section-wrapper[data-section-type="takeaways"] :global(li.markdown) {
+            padding-left: 1.25rem;
+            margin-bottom: 0.5rem;
+            font-size: 1rem;
+            line-height: 1.55;
+        }
     }
 
     /* Shared heading styles */
