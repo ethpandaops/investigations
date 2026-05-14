@@ -244,15 +244,36 @@ Are the source deltas different on slots where FCR itself disagreed? The previou
 
 Disagreement slots have a slightly larger source delta (about 0.8 more block-only voters on average, or 50 ETH of weight) but the distributions overlap heavily. The two are heavily skewed with a thin tail and the means are within noise of each other. The source delta is not what carved the 2,388-slot disagreement; the `support_discount` term from the previous investigation is still the actual driver.
 
+### When asking why gossip falls short
+
+A natural follow-up: if a single utility sentry sees every committee yet still misses ~10 voters per slot, what specifically does the sentry miss? Two gossipsub topics carry attestation data on mainnet:
+
+- `beacon_aggregate_and_proof` — designated aggregators broadcast a single aggregate per committee
+- `beacon_attestation_<subnet>` — every validator broadcasts their individual attestation on their committee's subnet
+
+The Teku replay uses only the aggregate-and-proof topic. A subscriber to that topic only sees a validator's vote if (a) an aggregator was selected that included that validator and (b) that aggregator's gossip message reached the sentry. Block proposers subscribe to both topics and additionally pull from their full peer mempool, so they catch every validator.
+
+We re-ran the per-slot delta on five sample slots using the single-attestation topic (`libp2p_gossipsub_beacon_attestation`) filtered to the same 5 sentries:
+
+| Slot | Block | Aggregate-and-proof gossip | Single-attestation gossip | Block − single |
+|---|---:|---:|---:|---:|
+| 13,209,000 | 30,142 | 30,077 | **30,142** | 0 |
+| 13,250,000 | 30,805 | 30,740 | **30,805** | 0 |
+| 13,300,000 | 30,845 | 30,769 | 30,844 | 1 |
+| 13,350,000 | 30,224 | 30,158 | **30,224** | 0 |
+| 13,380,000 | 30,369 | 30,285 | 30,368 | 1 |
+
+The single-attestation topic captures every validator the block sees, on every slot. The ~10-voters-per-slot gap is not a sentry-coverage problem and not a gossip-mesh problem. It is a topic-choice problem: choosing aggregate-and-proof as the single source guarantees a small structural shortfall, because not every validator's vote is guaranteed to be aggregated and gossiped. Subscribing to `beacon_attestation_<subnet>` instead (or in addition) closes the gap.
+
 </Section>
 
 <Section type="takeaways">
 
 ## Takeaways
 
-- The gossip-pool view is a strict subset of the block-included view in this sample. Across 800 slots, block-only has 7,140 distinct validators with no gossip-side; gossip-only is empty. The previous "0.25% of committee" delta is one-sided, not a bidirectional symmetric-difference.
+- The ~10-voters-per-slot block-included surplus over aggregate-and-proof gossip is a **gossip-topic-choice artifact**, not a sentry-coverage limit. Switching to the single-attestation gossip topic (`libp2p_gossipsub_beacon_attestation`) with the same 5 sentries closes the gap to 0 or 1 voters per slot across every sample slot tested. A subscriber to aggregate-and-proof only sees a validator's vote if an aggregator covered it and the aggregator's gossip reached the sentry; the single-attestation topic carries every validator's vote directly.
+- Within the aggregate-and-proof-only world, the gossip pipeline in this window is effectively a 1-sentry pipeline. Either utility sentry alone gives mean Jaccard 0.99968 against block-included. The 3 subnet-attached sentries were only up for a third of slots and add nothing when the utilities are up. The second utility sentry also adds nothing.
 - Weight-by-effective-balance tracks the count delta closely. Median delta is 32 ETH = 1 plain validator. Compounded validators are mildly over-represented among block-only (0.86% vs 0.47% baseline) but the absolute share is small enough that the weight picture matches the count picture.
-- The 5-sentry gossip pipeline in this window is effectively a 2-sentry pipeline. Either utility sentry alone gives mean Jaccard 0.99968 against block-included. The 3 subnet-attached sentries were only up for a third of slots and add nothing when the utilities are up. If both utilities had gone down together, the gossip-pool view would have been silent for hundreds of slots.
-- Disagreement slots show a marginally larger source delta than agreement slots (mean 10.1 vs 9.3 block-only voters) but the distributions overlap heavily. The data-source gap is not what carved the FCR implementation disagreement.
+- Disagreement slots show a marginally larger source delta than agreement slots (mean 10.1 vs 9.3 block-only voters) but the distributions overlap heavily. The data-source gap is not what carved the FCR implementation disagreement, and now we know that gap itself is closeable by changing topics.
 
 </Section>
