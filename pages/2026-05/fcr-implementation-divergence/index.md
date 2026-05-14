@@ -149,12 +149,12 @@ The **Fast Confirmation Rule** (FCR) is a proposed addition to the consensus-spe
 
 Two implementations of the rule now exist:
 
-- **Lighthouse** — [sigp/lighthouse#8951](https://github.com/sigp/lighthouse/pull/8951), a from-spec implementation tracking PR #4747.
-- **Teku research branch** — the basis for the Teku-based replay in the previous FCR investigation.
+- **Lighthouse**: [sigp/lighthouse#8951](https://github.com/sigp/lighthouse/pull/8951), a from-spec implementation tracking PR #4747.
+- **Teku research branch**: the basis for the Teku-based replay in the previous FCR investigation.
 
-We built a simulator on top of the Lighthouse implementation ([ethpandaops/fcr-simulator](https://github.com/ethpandaops/fcr-simulator)) and ran it across **epochs 412000–418139**, which is the same 195,190-slot range the Teku replay covered. Same window, two implementations — the goal here is to characterise where they disagree and why.
+We built a simulator on top of the Lighthouse implementation ([ethpandaops/fcr-simulator](https://github.com/ethpandaops/fcr-simulator)) and ran it across **epochs 412000–418139**, the same 195,190-slot range the Teku replay covered. Same window, two implementations. The goal here is to characterise where they disagree and why.
 
-A second axis to keep in mind throughout: the two implementations are also fed attestations from different sources. The Lighthouse simulator reads attestations out of canonical block bodies (a proposer-curated subset, capped per Electra by `MAX_ATTESTATIONS_ELECTRA = 8` aggregates per block). The Teku research replay reads aggregates from the `libp2p_gossipsub_aggregate_and_proof` table in xatu, filtered to a small set of sentry clients (the gossip-pool view). The disagreement we are explaining is therefore "implementation logic plus data source", and we want to know how much of the 1.15 pp comes from each.
+There's a second axis to keep in mind. The two implementations are also fed attestations from different sources. The Lighthouse simulator reads attestations out of canonical block bodies, which is a proposer-curated subset, capped per Electra by `MAX_ATTESTATIONS_ELECTRA = 8` aggregates per block. The Teku research replay reads aggregates from the `libp2p_gossipsub_aggregate_and_proof` table in xatu, filtered to a small set of sentry clients (the gossip-pool view). The disagreement we are explaining is therefore "implementation logic plus data source", and we want to know how much of the 1.15 pp comes from each.
 
 </Section>
 
@@ -164,7 +164,7 @@ A second axis to keep in mind throughout: the two implementations are also fed a
 
 ### When counting agreements and disagreements
 
-Over the 195,190-slot overlap (epochs 412000–418139), Teku reports a 96.96% confirmation rate; Lighthouse reports 95.81%. The 1.15 percentage point gap is real and one-sided — almost all of it comes from slots Teku confirms that Lighthouse does not.
+Over the 195,190-slot overlap (epochs 412000–418139), Teku reports a 96.96% confirmation rate; Lighthouse reports 95.81%. The 1.15 percentage point gap is real and one-sided. Almost all of it comes from slots Teku confirms that Lighthouse does not.
 
 <ECharts config={overlapConfig} height="380px" />
 
@@ -176,16 +176,16 @@ Over the 195,190-slot overlap (epochs 412000–418139), Teku reports a 96.96% co
 | Lighthouse confirmed, Teku did not | 143 | 0.07% |
 | **Total** | 195,190 | 100% |
 
-The 143 reverse-disagreement slots are noise (different state snapshots, edge cases on the boundary). The substantive gap is the 2,388 slots Teku is more confident about. That entire bucket is what we need to explain.
+The 143 reverse-disagreement slots are noise: different state snapshots, edge cases on the boundary. The substantive gap is the 2,388 slots Teku is more confident about. That entire bucket is what we need to explain.
 
 ### When comparing the two attestation data sources
 
 Before chasing the implementation logic we wanted to put a number on the data-source axis. The two replays are seeing different attestation sets:
 
 - **Lighthouse simulator**: attestations extracted from canonical block bodies. Each block carries at most `MAX_ATTESTATIONS_ELECTRA = 8` aggregates, chosen by the proposer from whatever they had locally at proposal time.
-- **Teku-based replay**: aggregates from xatu's `libp2p_gossipsub_aggregate_and_proof` table, filtered to a small set of sentry clients. This is the gossip-pool view — every aggregate that reached at least one of those sentries, regardless of whether any block ever included it.
+- **Teku-based replay**: aggregates from xatu's `libp2p_gossipsub_aggregate_and_proof` table, filtered to a small set of sentry clients. This is the gossip-pool view: every aggregate that reached at least one of those sentries, regardless of whether any block ever included it.
 
-The original disagreement window (epochs 412000–418139, December 2025 – January 2026) is now outside xatu's gossip-table retention (~43 days), so we cannot redo the comparison on the exact slots that drove the 1.15 pp gap. Instead we ran the comparison on a recent **50,400-slot window** (epochs 445837–447412, slots 14,266,799–14,317,198, 2026-05-06 to 2026-05-13) — well within retention.
+The original disagreement window (epochs 412000–418139, December 2025 to January 2026) is now outside xatu's gossip-table retention (~43 days), so we cannot redo the comparison on the exact slots that drove the 1.15 pp gap. Instead we ran the comparison on a recent **50,400-slot window** (epochs 445837–447412, slots 14,266,799–14,317,198, 2026-05-06 to 2026-05-13), well within retention.
 
 For each slot we computed two numbers:
 
@@ -200,7 +200,7 @@ For each slot we computed two numbers:
 | Gossip-pool (2 sentries) | 27,865 | 27,915 | — | — | 25,814 | 27,980 |
 | **block − gossip** | **+126** | **+75** | **+65** | **+393** | **+63** | **+2,163** |
 
-The average mainnet committee total in this window is ~28,060 validators per slot. Block-included aggregates capture ~99.75% of the committee on average; the 2-sentry gossip view captures ~99.30%. The mean per-slot delta is about 126 validators (~0.45% of committee), and the delta is **always positive in the window** — block-included sees at least 63 more voters than the 2-sentry gossip view in every single slot. The distribution:
+The average mainnet committee total in this window is ~28,060 validators per slot. Block-included aggregates capture ~99.75% of the committee on average; the 2-sentry gossip view captures ~99.30%. The mean per-slot delta is about 126 validators (~0.45% of committee), and the delta is **always positive in the window**. Block-included sees at least 63 more voters than the 2-sentry gossip view in every single slot. The distribution:
 
 <ECharts config={deltaBucketConfig} height="240px" />
 
@@ -210,19 +210,19 @@ The average mainnet committee total in this window is ~28,060 validators per slo
 - 3.3% of slots: more than 500 more
 - 0 slots: gossip sees more
 
-The direction is the opposite of what the naive "gossip-pool sees everything that propagated" framing predicts, and that's because only 2 of the original 5 sentries are currently emitting — two listening points can't reconstruct the full gossip mesh, while a block aggregator pools from a much wider peer set. With all 5 sentries online the gossip count would likely be higher; the previous investigation's slot-78 spike noted ~14,837 gossip voters vs 14,729 in-block (a +0.7% gap in the *other* direction). Either way, the data-source gap sits at the ~0.5%-of-committee scale.
+The direction is the opposite of what the naive "gossip-pool sees everything that propagated" framing predicts. The reason is that only 2 of the original 5 sentries are currently emitting; two listening points can't reconstruct the full gossip mesh, while a block aggregator pools from a much wider peer set. With all 5 sentries online the gossip count would likely be higher. The previous investigation's slot-78 spike noted ~14,837 gossip voters vs 14,729 in-block (a +0.7% gap in the *other* direction). Either way, the data-source gap sits at the ~0.5%-of-committee scale.
 
-**Take-away:** the data-source axis is real but small. It cannot account for the 1.15 pp confirmation-rate gap on its own — a 0.5% shift in attesting weight is well inside the noise of the safety threshold, and it tilts in the direction of *more* support for canonical heads in blocks, not less. Caveat: we cannot rerun this on the exact 412000–418139 window because of retention, so we are extrapolating from a recent slot range and the previous slot-78 spike. With that caveat, the data-source axis is not where the 1.15 pp lives. The implementation logic is.
+Take-away: the data-source axis is real but small. It cannot account for the 1.15 pp confirmation-rate gap on its own. A 0.5% shift in attesting weight is well inside the noise of the safety threshold, and it tilts in the direction of *more* support for canonical heads in blocks, not less. Caveat: we cannot rerun this on the exact 412000–418139 window because of retention, so we are extrapolating from a recent slot range and the previous slot-78 spike. With that caveat, the data-source axis is not where the 1.15 pp lives. The implementation logic is.
 
 ### When isolating a single disagreement
 
 We picked **slot 13,184,078** as a representative case. The block at slot 78 (`0xe9c236...`) arrived late: at slot 78's attestation deadline, only **14,729** of ~31,000 validators in slot 78's committee had seen it. The other **16,194** voted for the parent (`0xd58f96...`, slot 77's canonical block).
 
-The disagreement actually appears one slot later, at slot 13,184,079 (Teku confirmed, Lighthouse did not). The block at slot 79 (`0xbadf6ba0`) had 30,823 distinct validators voting for it — about 99% by count, plenty of weight.
+The disagreement actually appears one slot later, at slot 13,184,079 (Teku confirmed, Lighthouse did not). The block at slot 79 (`0xbadf6ba0`) had 30,823 distinct validators voting for it, about 99% by count. Plenty of weight.
 
 Why didn't Lighthouse confirm? FCR's `find_latest_confirmed_descendant` walks ancestors and breaks on the first failure. To confirm slot 79, the chain check has to independently pass slot 78. The suffix-sum scoring (`get_attestation_score`) means slot 79's voters count toward slot 78's score as well: `14,729 + 30,823 = 45,552` distinct validators with `current_root` in slot 78's subtree.
 
-We computed exact effective balances from the BN at slot 13,184,080's state for all 45,546 of those distinct voters. Total support for slot 78 in the 2-slot evaluation window: **1,656,717 ETH**. The Teku log for the same slot reports support of **1,654,605 ETH** — i.e. we have **more** support than Teku does, yet Lighthouse still fails the threshold and Teku still passes it. The gap can't be on the support side. It has to be in the threshold itself.
+We computed exact effective balances from the BN at slot 13,184,080's state for all 45,546 of those distinct voters. Total support for slot 78 in the 2-slot evaluation window: **1,656,717 ETH**. The Teku log for the same slot reports support of **1,654,605 ETH**. We have **more** support than Teku does, yet Lighthouse still fails the threshold and Teku still passes it. The gap can't be on the support side. It has to be in the threshold itself.
 
 ### When inspecting the threshold
 
@@ -272,9 +272,9 @@ UInt64 parentBlockSupport =                                       // non-spec ad
 return emptySlotSupport.plus(parentBlockSupport);
 ```
 
-Teku adds a second term: `parentBlockSupport`, evaluated **at the block's own slot** (`blockSlot, blockSlot`). The spec's `get_support_discount` has no such term. For our example slot, this term returns the weight of the 16,194 parent-voters — exactly the 544,432 ETH delta we observed. The same shape holds on the rest of the 2,388 disagreement slots: every time Teku confirms and Lighthouse does not, it is because Teku's larger discount pulls the safety threshold below support.
+Teku adds a second term: `parentBlockSupport`, evaluated **at the block's own slot** (`blockSlot, blockSlot`). The spec's `get_support_discount` has no such term. For our example slot, this term returns the weight of the 16,194 parent-voters, which matches the 544,432 ETH delta we observed exactly. The same shape holds on the rest of the 2,388 disagreement slots: every time Teku confirms and Lighthouse does not, it is because Teku's larger discount pulls the safety threshold below support.
 
-This looks deliberate. A validator that already attested for the parent at the block's own slot cannot, without equivocating, then support a competing slot-N child. From an adversary's point of view that weight is "honest unavailable" — it can't be used against the confirmation. Treating it as a discount is a defensible tightening of the safety threshold. But it is not in the current spec text, and it is not in the initial commit of the spec either: the only support_discount the spec defines is the empty-slot one.
+This looks deliberate. A validator that already attested for the parent at the block's own slot cannot, without equivocating, then support a competing slot-N child. From an adversary's point of view that weight is "honest unavailable", so it can't be used against the confirmation. Treating it as a discount is a defensible tightening of the safety threshold. But it is not in the current spec text, and it is not in the initial commit of the spec either: the only support_discount the spec defines is the empty-slot one.
 
 </Section>
 
