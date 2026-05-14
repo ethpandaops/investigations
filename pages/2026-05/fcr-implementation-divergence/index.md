@@ -1,0 +1,266 @@
+---
+title: FCR Implementation Divergence
+sidebar_position: 2
+description: Two implementations of consensus-specs PR #4747 (Fast Confirmation Rule) disagree on 1.2% of mainnet slots. Tracing the gap back to a non-spec extension in a Teku branch that adds same-slot parent-vote weight to the safety-threshold discount.
+date: 2026-05-14T00:00:00Z
+author: samcm
+tags:
+  - consensus
+  - fast-confirmation
+  - fork-choice
+  - lighthouse
+  - teku
+---
+
+<script>
+    import PageMeta from '$lib/PageMeta.svelte';
+    import Section from '$lib/Section.svelte';
+    import { ECharts } from '@evidence-dev/core-components';
+
+    const overlapData = [
+        { name: 'Both confirmed', value: 186874, color: '#16a34a' },
+        { name: 'Teku confirmed, Lighthouse not', value: 2388, color: '#dc2626' },
+        { name: 'Lighthouse confirmed, Teku not', value: 143, color: '#9333ea' },
+        { name: 'Both unconfirmed', value: 5785, color: '#9ca3af' }
+    ];
+
+    $: overlapConfig = {
+        title: { text: '195,190-slot overlap: where the two implementations agree and disagree', left: 'center', textStyle: { fontSize: 13 } },
+        tooltip: {
+            trigger: 'item',
+            formatter: (p) => `<b>${p.name}</b><br/>${p.value.toLocaleString()} slots (${(p.percent).toFixed(2)}%)`
+        },
+        legend: { orient: 'vertical', right: 10, top: 'center' },
+        series: [{
+            type: 'pie',
+            radius: ['40%', '70%'],
+            center: ['38%', '55%'],
+            avoidLabelOverlap: true,
+            label: { show: true, formatter: '{b}\n{d}%' },
+            labelLine: { show: true },
+            data: overlapData.map(d => ({ name: d.name, value: d.value, itemStyle: { color: d.color } }))
+        }]
+    };
+
+    const thresholdRows = [
+        { name: 'Lighthouse', support: 1660301, threshold: 1893004, passes: false },
+        { name: 'Teku',       support: 1654605, threshold: 1620788, passes: true  }
+    ];
+
+    $: thresholdConfig = (() => {
+        const categories = thresholdRows.map(r => r.name);
+        return {
+            title: { text: 'Slot 13,184,078: support vs safety threshold (ETH)', left: 'center', textStyle: { fontSize: 13 } },
+            tooltip: {
+                trigger: 'axis',
+                axisPointer: { type: 'shadow' },
+                formatter: (params) => {
+                    let html = `<b>${params[0].axisValue}</b><br/>`;
+                    params.forEach(p => { html += `${p.marker} ${p.seriesName}: ${Number(p.value).toLocaleString()} ETH<br/>`; });
+                    return html;
+                }
+            },
+            legend: { data: ['support', 'safety_threshold'], top: 25 },
+            grid: { left: 110, right: 110, top: 70, bottom: 55 },
+            xAxis: { type: 'value', name: 'ETH', nameLocation: 'center', nameGap: 30, min: 1500000, max: 2000000, axisLabel: { formatter: (v) => (v/1e6).toFixed(2)+'M' } },
+            yAxis: { type: 'category', data: categories },
+            series: [
+                {
+                    name: 'support',
+                    type: 'bar',
+                    itemStyle: { color: '#16a34a' },
+                    data: thresholdRows.map(r => r.support),
+                    label: { show: true, position: 'right', formatter: (p) => (Number(p.value)/1e6).toFixed(3)+'M' },
+                    barGap: '20%'
+                },
+                {
+                    name: 'safety_threshold',
+                    type: 'bar',
+                    data: thresholdRows.map(r => ({ value: r.threshold, itemStyle: { color: r.passes ? '#a3a3a3' : '#dc2626' } })),
+                    label: { show: true, position: 'right', formatter: (p) => (Number(p.value)/1e6).toFixed(3)+'M' }
+                }
+            ]
+        };
+    })();
+
+    const sourceCompareData = [
+        { name: 'Block-included', value: 30490, color: '#16a34a' },
+        { name: 'Gossip-pool (5 sentries)', value: 30414, color: '#2563eb' }
+    ];
+
+    $: sourceCompareConfig = {
+        title: { text: 'Distinct attesting validators per slot, 299 sampled slots from epochs 412000-418139', left: 'center', textStyle: { fontSize: 13 } },
+        tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' }, formatter: (params) => `<b>${params[0].name}</b><br/>${params[0].value.toLocaleString()} validators` },
+        grid: { left: 180, right: 60, top: 60, bottom: 40 },
+        xAxis: { type: 'value', min: 30200, max: 30600, name: 'validators', nameLocation: 'center', nameGap: 25 },
+        yAxis: { type: 'category', data: sourceCompareData.map(d => d.name) },
+        series: [{
+            type: 'bar',
+            data: sourceCompareData.map(d => ({ value: d.value, itemStyle: { color: d.color } })),
+            label: { show: true, position: 'right', formatter: (p) => Number(p.value).toLocaleString() }
+        }]
+    };
+
+    const deltaBucketData = [
+        { name: 'delta = 64', value: 125 },
+        { name: 'delta 65 to 69', value: 136 },
+        { name: 'delta 70 to 79', value: 18 },
+        { name: 'delta 80 to 99', value: 8 },
+        { name: 'delta 100 to 199', value: 6 },
+        { name: 'delta 200 to 499', value: 3 },
+        { name: 'delta 500+', value: 3 }
+    ];
+
+    $: deltaBucketConfig = {
+        title: { text: 'Per-slot voter gap (block-included minus gossip), 299 sampled slots', left: 'center', textStyle: { fontSize: 13 } },
+        tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' }, formatter: (params) => {
+            const total = 299;
+            const v = params[0].value;
+            return `<b>${params[0].name}</b><br/>${v.toLocaleString()} slots (${(100 * v / total).toFixed(1)}%)`;
+        } },
+        grid: { left: 150, right: 80, top: 60, bottom: 40 },
+        xAxis: { type: 'value', name: 'slots', nameLocation: 'center', nameGap: 25 },
+        yAxis: { type: 'category', data: deltaBucketData.map(d => d.name) },
+        series: [{
+            type: 'bar',
+            data: deltaBucketData.map(d => ({ value: d.value, itemStyle: { color: '#0ea5e9' } })),
+            label: { show: true, position: 'right', formatter: (p) => `${Number(p.value).toLocaleString()} (${(100 * p.value / 299).toFixed(1)}%)` }
+        }]
+    };
+</script>
+
+<PageMeta
+    date="2026-05-14T00:00:00Z"
+    author="samcm"
+    tags={["consensus", "fast-confirmation", "fork-choice", "lighthouse", "teku"]}
+    networks={["Ethereum Mainnet"]}
+    startTime="2025-12-06T00:00:00Z"
+    endTime="2026-01-02T23:59:59Z"
+/>
+
+<Section type="question">
+
+## Question
+
+Two independent implementations of consensus-specs [PR #4747](https://github.com/ethereum/consensus-specs/pull/4747) (Fast Confirmation Rule) disagree on 1.2% of mainnet slots over the same epoch range. Where does the divergence come from, and which one matches the spec?
+
+</Section>
+
+<Section type="background">
+
+## Background
+
+The **Fast Confirmation Rule** (FCR) is a proposed addition to the consensus-specs ([PR #4747](https://github.com/ethereum/consensus-specs/pull/4747)) that lets a node locally **confirm** a block within seconds of the attestation deadline, well ahead of FFG finality.
+
+Two implementations of the rule now exist: **Lighthouse** ([sigp/lighthouse#8951](https://github.com/sigp/lighthouse/pull/8951), tracking PR #4747 from spec) and a **Teku branch**. We ran our Lighthouse-based simulator ([ethpandaops/fcr-simulator](https://github.com/ethpandaops/fcr-simulator)) across **epochs 412000–418139** (195,190 slots) and compared its output against the Teku branch's replay logs over the same range. Teku reports a 96.96% confirmation rate on that range; Lighthouse reports 95.81%. This page traces the 1.15 pp gap.
+
+</Section>
+
+<Section type="investigation">
+
+## Investigation
+
+### When counting agreements and disagreements
+
+The gap is one-sided. Almost all of it comes from slots Teku confirms that Lighthouse does not.
+
+<ECharts config={overlapConfig} height="380px" />
+
+| Category | Slots | Share |
+|---|---:|---:|
+| Both confirmed | 186,874 | 95.74% |
+| Both unconfirmed | 5,785 | 2.96% |
+| Teku confirmed, Lighthouse did not | **2,388** | **1.22%** |
+| Lighthouse confirmed, Teku did not | 143 | 0.07% |
+| **Total** | 195,190 | 100% |
+
+The substantive gap is the 2,388 slots Teku confirms and Lighthouse does not. That bucket is what we are going to investigate here. The 143 reverse-direction slots (Lighthouse confirms, Teku does not) are a separate, smaller asymmetry that we are not investigating in this page.
+
+### When comparing the two attestation data sources
+
+The two replays feed FCR from different sources. Our Lighthouse simulator pulls attestations from the **next future canonical block** after each slot, on the assumption that the proposer included the aggregates that were observable at proposal time. That subset is capped per Electra at `MAX_ATTESTATIONS_ELECTRA = 8` aggregates per block. The Teku branch reads aggregates from xatu's `libp2p_gossipsub_aggregate_and_proof` table filtered to 5 sentry clients, which is the gossip-pool view: every aggregate that reached at least one of those sentries, whether or not any block ever included it.
+
+The 1.15 pp could come from either implementation logic, data source, or both. We sampled 299 random slots from the disagreement window (epochs 412000-418139) and counted distinct validators voting for the canonical head from each source. Block side uses `uniqExact(arrayJoin(validators))` over `canonical_beacon_elaborated_attestation`. Gossip side takes the per-committee max popcount of `aggregation_bits`, summed across committees and minus one terminator per committee, restricted to the 5 sentries.
+
+<ECharts config={sourceCompareConfig} height="180px" />
+
+| Source | Mean | Median | P25 | P75 |
+|---|---:|---:|---:|---:|
+| Block-included | 30,490 | 30,779 | 30,608 | 30,904 |
+| Gossip-pool (5 sentries) | 30,414 | 30,709 | 30,543 | 30,834 |
+| **block − gossip** | **+76** | **+65** | **+64** | **+67** |
+
+The two views are essentially the same. Mean per-slot delta is +76 validators (~0.25% of the ~30,000-validator slot committee), and block-included sees more voters than gossip in **all 299 sampled slots** (max +767, min +64). The 0.25% shift is well inside the noise of the safety threshold, and it tilts toward *more* support on the Lighthouse side, not less. The 1.15 pp does not live in the data source. It lives in the implementation logic.
+
+<ECharts config={deltaBucketConfig} height="240px" />
+
+### When isolating a single disagreement
+
+We picked **slot 13,184,078** as a representative case. The block at slot 78 (`0xe9c236...`) arrived late: at slot 78's attestation deadline, only **14,729** of ~31,000 validators in slot 78's committee had seen it. The other **16,194** voted for the parent (`0xd58f96...`, slot 77's canonical block).
+
+The disagreement actually appears one slot later, at slot 13,184,079 (Teku confirmed, Lighthouse did not). The block at slot 79 (`0xbadf6ba0`) had 30,823 distinct validators voting for it, about 99% by count. Plenty of weight.
+
+Why didn't Lighthouse confirm? FCR's `find_latest_confirmed_descendant` walks ancestors and breaks on the first failure. To confirm slot 79, the chain check has to independently pass slot 78. The suffix-sum scoring (`get_attestation_score`) means slot 79's voters count toward slot 78's score as well: `14,729 + 30,823 = 45,552` distinct validators with `current_root` in slot 78's subtree.
+
+We computed exact effective balances from the BN at slot 13,184,080's state for all 45,546 of those distinct voters. Total support for slot 78 in the 2-slot evaluation window: **1,656,717 ETH**. The Teku log for the same slot reports support of **1,654,605 ETH**. We have **more** support than Teku does, yet Lighthouse still fails the threshold and Teku still passes it. The gap can't be on the support side. It has to be in the threshold itself.
+
+### When inspecting the threshold
+
+We ran the Lighthouse engine with `RUST_LOG=beacon_chain::fast_confirmation=debug` against a targeted 1-epoch slice and captured the exact `is_one_confirmed_with_score` numbers, then put them next to the Teku logs for the same slot:
+
+| Field | Lighthouse | Teku (log) |
+|---|---:|---:|
+| support | 1,660,301 ETH | 1,654,605 ETH |
+| max_support | 2,227,064 ETH | 2,227,064 ETH |
+| proposer_score | 445,412 ETH | 445,412 ETH |
+| adversarial_weight (2-slot) | 556,766 ETH | 556,766 ETH |
+| **support_discount** | **0 ETH** | **544,432 ETH** |
+| **safety_threshold** | **1,893,004 ETH** | **1,620,788 ETH** |
+| Verdict | **FAIL by 233k ETH** | **PASS by 34k ETH** |
+
+Every component agrees except `support_discount`. Teku subtracts 544,432 ETH from its threshold; Lighthouse subtracts zero. The size of that delta is not a coincidence: it equals the weight of the 16,194 validators that voted for the parent at slot 78's deadline.
+
+<ECharts config={thresholdConfig} height="260px" />
+
+Both implementations agree on the components going into the threshold (proposer_score + adversarial_weight). They disagree on the discount coming out, and that disagreement moves the threshold by 272k ETH. The support values are within 5,696 ETH of each other; what changes the verdict is which side of the threshold support lands on.
+
+### When reading the spec
+
+The spec defines `compute_empty_slot_support_discount` ([fast-confirmation.md on `mkalinin:fast-conf-rule`](https://github.com/ethereum/consensus-specs/pull/4747)):
+
+```python
+if parent_block.slot + 1 == block.slot:
+    return Gwei(0)
+```
+
+Lighthouse matches verbatim (`lighthouse/beacon_node/beacon_chain/src/fast_confirmation.rs:1064`):
+
+```rust
+if parent_slot.saturating_add(1u64) == block_slot {
+    return Ok(0);
+}
+```
+
+For slot 78 with parent at slot 77, `77 + 1 == 78`, so the spec function returns 0. There is no empty-slot discount to apply, because there is no empty slot. Lighthouse is doing exactly what the spec says.
+
+The Teku branch (`ConfirmationRuleUtil.java`, `getSupportDiscount`) does something different:
+
+```java
+UInt64 emptySlotSupport = computeEmptySlotSupportDiscount(...);   // spec-compliant, = 0
+UInt64 parentBlockSupport =                                       // non-spec addition
+    getBlockSupportInSlots(store, balanceSource, parentRoot, blockSlot, blockSlot);
+return emptySlotSupport.plus(parentBlockSupport);
+```
+
+Teku adds a second term: `parentBlockSupport`, evaluated **at the block's own slot** (`blockSlot, blockSlot`). The spec's `get_support_discount` has no such term. For our example slot, this term returns the weight of the 16,194 parent-voters, which matches the 544,432 ETH delta we observed exactly. The same shape holds on the rest of the 2,388 disagreement slots: every time Teku confirms and Lighthouse does not, it is because Teku's larger discount pulls the safety threshold below support.
+
+</Section>
+
+<Section type="takeaways">
+
+## Takeaways
+
+- The 1.15 pp gap between Teku (96.96%) and Lighthouse (95.81%) on the same 195,190-slot range is **driven by the implementation logic, not the data source**. Direct comparison on the disagreement window shows the two sources agree to within 0.25% of committee, and the small remaining bias is toward more block-included voters, not fewer.
+- The implementation gap is Teku's non-spec `support_discount` term. Lighthouse matches PR #4747 verbatim; the Teku branch adds a same-slot parent-vote term that the spec does not define. Across the 2,388 disagreement slots, every "Teku-yes, Lighthouse-no" is explained by Teku's larger discount pulling the safety threshold below support.
+
+</Section>
