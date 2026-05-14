@@ -82,15 +82,15 @@ tags:
     })();
 
     const sourceCompareData = [
-        { name: 'Block-included', value: 27990, color: '#16a34a' },
-        { name: 'Gossip-pool (2 sentries)', value: 27865, color: '#2563eb' }
+        { name: 'Block-included', value: 30490, color: '#16a34a' },
+        { name: 'Gossip-pool (5 sentries)', value: 30414, color: '#2563eb' }
     ];
 
     $: sourceCompareConfig = {
-        title: { text: 'Distinct attesting validators per slot (50,400-slot mean)', left: 'center', textStyle: { fontSize: 13 } },
+        title: { text: 'Distinct attesting validators per slot, 299 sampled slots from epochs 412000-418139', left: 'center', textStyle: { fontSize: 13 } },
         tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' }, formatter: (params) => `<b>${params[0].name}</b><br/>${params[0].value.toLocaleString()} validators` },
-        grid: { left: 160, right: 60, top: 60, bottom: 40 },
-        xAxis: { type: 'value', min: 27500, max: 28100, name: 'validators', nameLocation: 'center', nameGap: 25 },
+        grid: { left: 180, right: 60, top: 60, bottom: 40 },
+        xAxis: { type: 'value', min: 30200, max: 30600, name: 'validators', nameLocation: 'center', nameGap: 25 },
         yAxis: { type: 'category', data: sourceCompareData.map(d => d.name) },
         series: [{
             type: 'bar',
@@ -100,26 +100,29 @@ tags:
     };
 
     const deltaBucketData = [
-        { name: 'block − gossip in (50, 100]', value: 36759 },
-        { name: 'block − gossip in (100, 200]', value: 7647 },
-        { name: 'block − gossip in (200, 500]', value: 4320 },
-        { name: 'block − gossip > 500', value: 1674 }
+        { name: 'delta = 64', value: 125 },
+        { name: 'delta 65 to 69', value: 136 },
+        { name: 'delta 70 to 79', value: 18 },
+        { name: 'delta 80 to 99', value: 8 },
+        { name: 'delta 100 to 199', value: 6 },
+        { name: 'delta 200 to 499', value: 3 },
+        { name: 'delta 500+', value: 3 }
     ];
 
     $: deltaBucketConfig = {
-        title: { text: 'Per-slot voter gap (block-included minus gossip), 50,400 slots', left: 'center', textStyle: { fontSize: 13 } },
+        title: { text: 'Per-slot voter gap (block-included minus gossip), 299 sampled slots', left: 'center', textStyle: { fontSize: 13 } },
         tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' }, formatter: (params) => {
-            const total = 50400;
+            const total = 299;
             const v = params[0].value;
             return `<b>${params[0].name}</b><br/>${v.toLocaleString()} slots (${(100 * v / total).toFixed(1)}%)`;
         } },
-        grid: { left: 200, right: 80, top: 60, bottom: 40 },
+        grid: { left: 150, right: 80, top: 60, bottom: 40 },
         xAxis: { type: 'value', name: 'slots', nameLocation: 'center', nameGap: 25 },
         yAxis: { type: 'category', data: deltaBucketData.map(d => d.name) },
         series: [{
             type: 'bar',
             data: deltaBucketData.map(d => ({ value: d.value, itemStyle: { color: '#0ea5e9' } })),
-            label: { show: true, position: 'right', formatter: (p) => `${Number(p.value).toLocaleString()} (${(100 * p.value / 50400).toFixed(1)}%)` }
+            label: { show: true, position: 'right', formatter: (p) => `${Number(p.value).toLocaleString()} (${(100 * p.value / 299).toFixed(1)}%)` }
         }]
     };
 </script>
@@ -173,41 +176,21 @@ The 143 reverse-disagreement slots are noise: different state snapshots, edge ca
 
 ### When comparing the two attestation data sources
 
-There is a second axis to consider before chasing the implementation logic. The two replays are fed attestations from different sources:
+The two replays are fed attestations from different sources. Lighthouse reads aggregates from canonical block bodies (capped per Electra at `MAX_ATTESTATIONS_ELECTRA = 8` aggregates per block, proposer-curated). The Teku replay reads from xatu's `libp2p_gossipsub_aggregate_and_proof` filtered to 5 sentry clients (the gossip-pool view). The 1.15 pp could come from either implementation logic, data source, or both.
 
-- **Lighthouse simulator**: attestations extracted from canonical block bodies. Each block carries at most `MAX_ATTESTATIONS_ELECTRA = 8` aggregates, chosen by the proposer from whatever they had locally at proposal time. This is a proposer-curated subset.
-- **Teku-based replay**: aggregates from xatu's `libp2p_gossipsub_aggregate_and_proof` table, filtered to a small set of sentry clients. This is the gossip-pool view: every aggregate that reached at least one of those sentries, regardless of whether any block ever included it.
-
-The disagreement is therefore "implementation logic plus data source", and we want to know how much of the 1.15 pp comes from each.
-
-The original disagreement window (epochs 412000–418139, December 2025 to January 2026) is now outside xatu's gossip-table retention (~43 days), so we cannot redo the comparison on the exact slots that drove the 1.15 pp gap. Instead we ran the comparison on a recent **50,400-slot window** (epochs 445837–447412, slots 14,266,799–14,317,198, 2026-05-06 to 2026-05-13), well within retention.
-
-For each slot we computed two numbers:
-
-- **block_voters**: the count of distinct validator indices present in the `validators` array across every block-included aggregate from `canonical_beacon_elaborated_attestation` whose attested slot equals the slot in question (within a 32-slot inclusion window).
-- **gossip_voters**: the count of distinct (committee_index, bit_position) pairs voting across the union of all `aggregation_bits` for the slot in `libp2p_gossipsub_aggregate_and_proof`, restricted to the sentries that are currently emitting (`ethpandaops/mainnet/utility-mainnet-lighthouse-geth-001` and `-003`; the other three sentry clients from the original replay are no longer producing data).
+We sampled 299 random slots from the original disagreement window (epochs 412000-418139, December 2025 to January 2026) and counted distinct validators voting for the canonical head from each source. Block side uses `uniqExact(arrayJoin(validators))` over `canonical_beacon_elaborated_attestation`. Gossip side takes the per-committee max popcount of `aggregation_bits`, summed across committees and minus one terminator per committee.
 
 <ECharts config={sourceCompareConfig} height="180px" />
 
-| Source | Mean | Median | P5 | P95 | Min | Max |
-|---|---:|---:|---:|---:|---:|---:|
-| Block-included | 27,990 | 27,996 | — | — | 27,036 | 28,046 |
-| Gossip-pool (2 sentries) | 27,865 | 27,915 | — | — | 25,814 | 27,980 |
-| **block − gossip** | **+126** | **+75** | **+65** | **+393** | **+63** | **+2,163** |
+| Source | Mean | Median | P25 | P75 |
+|---|---:|---:|---:|---:|
+| Block-included | 30,490 | 30,779 | 30,608 | 30,904 |
+| Gossip-pool (5 sentries) | 30,414 | 30,709 | 30,543 | 30,834 |
+| **block − gossip** | **+76** | **+65** | **+64** | **+67** |
 
-The average mainnet committee total in this window is ~28,060 validators per slot. Block-included aggregates capture ~99.75% of the committee on average; the 2-sentry gossip view captures ~99.30%. The mean per-slot delta is about 126 validators (~0.45% of committee), and the delta is **always positive in the window**. Block-included sees at least 63 more voters than the 2-sentry gossip view in every single slot. The distribution:
+The two views are essentially the same. Mean per-slot delta is +76 validators (~0.25% of the ~30,000-validator slot committee), and block-included sees more voters than gossip in **all 299 sampled slots** (max +767, min +64). The 0.25% shift is well inside the noise of the safety threshold, and it tilts toward *more* support on the Lighthouse side, not less. The 1.15 pp does not live in the data source. It lives in the implementation logic.
 
 <ECharts config={deltaBucketConfig} height="240px" />
-
-- 72.9% of slots: block sees 50–100 more voters than gossip
-- 15.2% of slots: 100–200 more
-- 8.6% of slots: 200–500 more
-- 3.3% of slots: more than 500 more
-- 0 slots: gossip sees more
-
-The direction is the opposite of what the naive "gossip-pool sees everything that propagated" framing predicts. The reason is that only 2 of the original 5 sentries are currently emitting; two listening points can't reconstruct the full gossip mesh, while a block aggregator pools from a much wider peer set. With all 5 sentries online the gossip count would likely be higher. The previous investigation's slot-78 spike noted ~14,837 gossip voters vs 14,729 in-block (a +0.7% gap in the *other* direction). Either way, the data-source gap sits at the ~0.5%-of-committee scale.
-
-Take-away: the data-source axis is real but small. It cannot account for the 1.15 pp confirmation-rate gap on its own. A 0.5% shift in attesting weight is well inside the noise of the safety threshold, and it tilts in the direction of *more* support for canonical heads in blocks, not less. Caveat: we cannot rerun this on the exact 412000–418139 window because of retention, so we are extrapolating from a recent slot range and the previous slot-78 spike. With that caveat, the data-source axis is not where the 1.15 pp lives. The implementation logic is.
 
 ### When isolating a single disagreement
 
@@ -277,12 +260,11 @@ This looks deliberate. A validator that already attested for the parent at the b
 
 ## Takeaways
 
-- The 1.15 pp gap between Teku (96.96%) and Lighthouse (95.81%) on the same 195,190-slot range is **driven by the implementation logic, not the data source**. The data-source axis (block bodies vs 2-sentry gossip pool) sits at ~0.5% of committee on a recent 50,400-slot window and tilts in the direction of *more* block-included voters, not fewer.
+- The 1.15 pp gap between Teku (96.96%) and Lighthouse (95.81%) on the same 195,190-slot range is **driven by the implementation logic, not the data source**. Direct comparison on the disagreement window shows the two sources agree to within 0.25% of committee, and the small remaining bias is toward more block-included voters, not fewer.
 - The implementation gap is Teku's non-spec `support_discount` term. Lighthouse matches PR #4747 verbatim; the Teku research branch adds a same-slot parent-vote term that the spec does not define. Across the 2,388 disagreement slots, every "Teku-yes, Lighthouse-no" is explained by Teku's larger discount pulling the safety threshold below support.
 - This is not "Lighthouse is wrong". On PR #4747 as currently written, Lighthouse is spec-correct and the conservative number (~95.8%) is the strict-spec FCR rate on this range.
 - The headline 96.9% from the [previous FCR investigation](/2026-03/fast-confirmation-rule/) includes ~1.15 pp of confirmations that strict-spec FCR would not make. The spec-correct number on the same epoch range is ~95.8%.
 - The same-slot parent-vote extension is plausibly an **improvement** worth proposing for the spec: validators that voted for the parent at slot N cannot non-equivocatingly support a competing slot-N child, so their weight is fair to discount. It is a coherent tightening, but it needs to be stated and tested as a spec change.
 - Action items: if the Teku branch is meant to track PR #4747 strictly, drop the `parentBlockSupport` term from `getSupportDiscount`. If the extension is the intended design, propose it as a follow-up to PR #4747. Either way, the 12-month FCR run we are producing on [fcr-simulator](https://github.com/ethpandaops/fcr-simulator) is on spec-strict Lighthouse and will report the conservative number.
-- Data-source caveat: we could not replay the exact 412000–418139 disagreement window because the gossip-aggregate table has ~43-day retention. The data-source comparison above is on a recent 50,400-slot window (epochs 445837–447412) and uses 2 of the original 5 sentries (the others are no longer emitting). The gap looks small in both directions across the data we have.
 
 </Section>
