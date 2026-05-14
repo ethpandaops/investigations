@@ -228,7 +228,7 @@ tags:
 
 ## Question
 
-The [previous investigation](../fcr-implementation-divergence/) sampled 299 slots and said the gap between the two FCR attestation data sources was small (about 0.25% of committee). That figure came from a single per-slot distinct-validator count, which is coarse. Does the conclusion hold at a finer grain? How do the two sets actually overlap, what does the picture look like once you weight by effective balance, and how much of the gossip view depends on having all 5 sentries up?
+The [previous investigation](../fcr-implementation-divergence/) sampled 299 slots and reported the gap between the two FCR attestation data sources at about 0.25% of committee. That was a single per-slot distinct-validator count, which is coarse. Does the conclusion hold at a finer grain? How do the two sets actually overlap, what does it look like once you weight by effective balance, and how much of the gossip view depends on having all 5 sentries up?
 
 </Section>
 
@@ -236,21 +236,14 @@ The [previous investigation](../fcr-implementation-divergence/) sampled 299 slot
 
 ## Background
 
-The previous investigation [../fcr-implementation-divergence](../fcr-implementation-divergence/) traced a 1.15 pp Fast Confirmation Rule disagreement between Lighthouse and a Teku branch to a non-spec `support_discount` term. As a side check, it sampled 299 slots and counted distinct validators voting for the canonical head from each source.
+The previous investigation traced a 1.15 pp Fast Confirmation Rule disagreement between Lighthouse and the Teku branch to a non-spec `support_discount` term. As a side check, it sampled 299 slots and counted distinct validators voting for the canonical head from each source.
 
 The two sources are:
 
 - **Block-included**: aggregates extracted from canonical block bodies, capped per Electra at `MAX_ATTESTATIONS_ELECTRA = 8` aggregates per block. Stored in xatu's `canonical_beacon_elaborated_attestation` with a pre-decoded `validators` array. The Lighthouse FCR simulator uses this.
 - **Gossip-pool (5 sentries)**: aggregate-and-proof messages observed by 5 specific sentry clients. Stored in `libp2p_gossipsub_aggregate_and_proof` with raw `aggregation_bits`. The Teku branch uses this.
 
-The 299-slot check found block-side averaged 76 more distinct voters than gossip per slot (~0.25% of committee) and concluded the gap was inside the noise floor. That left several questions:
-
-- Are the two sets the same 99.75% with a small extra block-side bias, or do both sides have unique populations?
-- Does the picture change when you weight by effective balance? Post-Electra (EIP-7251) effective balances range 32 to 2048 ETH, so a single compounded validator on one side can shift the weight number a lot more than the count number.
-- How much does the gossip view degrade if some of the 5 sentries are down?
-- Is the source delta correlated with the slots where FCR itself disagreed?
-
-This page samples 800 slots from the same window (400 from the 2,388 Teku-yes / Lighthouse-no disagreement set, plus 400 random from the rest), pulls per-slot block-included voters via SQL, decodes the gossip side bit-by-bit against historical committees from `canonical_beacon_committee`, and runs the comparison.
+The 299-slot check found block-side averaged 76 more distinct voters than gossip per slot (~0.25% of committee) and concluded the gap was inside the noise floor. This page resamples 800 slots from the same window (400 from the 2,388 Teku-yes / Lighthouse-no disagreement set, plus 400 random from the rest), pulls per-slot block-included voters via SQL, decodes the gossip side bit-by-bit against historical committees from `canonical_beacon_committee`, and runs the comparison.
 
 </Section>
 
@@ -262,11 +255,11 @@ This page samples 800 slots from the same window (400 from the 2,388 Teku-yes / 
 
 For each of the 800 sample slots S, we get:
 
-- The canonical block at slot S from `canonical_beacon_block` (gives the `block_root` for the head vote).
+- The canonical block at slot S from `canonical_beacon_block` (the `block_root` for the head vote).
 - All distinct validators with `(slot=S, beacon_block_root=root(S))` from `canonical_beacon_elaborated_attestation`, flattened from the `validators` array.
-- For each of the 5 sentries: per-(slot, committee_index), the union of `aggregation_bits` over all observed aggregate-and-proof messages with `(slot=S, beacon_block_root=root(S))`. Bit positions are decoded against `canonical_beacon_committee.validators` to recover validator indices.
+- For each of the 5 sentries, per-(slot, committee_index): the union of `aggregation_bits` over all observed aggregate-and-proof messages with `(slot=S, beacon_block_root=root(S))`. Bit positions are decoded against `canonical_beacon_committee.validators` to recover validator indices.
 
-The block-included query for the full 800-slot sample is the kind of thing that benefits from a `(slot, beacon_block_root)` tuple IN clause:
+The block-included query benefits from a `(slot, beacon_block_root)` tuple IN clause:
 
 ```bash
 panda clickhouse query xatu "
@@ -291,7 +284,7 @@ After the merge each slot has a `block_voters` set and, separately, a `gossip_vo
 
 ### When measuring per-slot overlap
 
-The per-slot Jaccard is almost everywhere very close to 1.
+Per-slot Jaccard is close to 1 almost everywhere.
 
 <ECharts config={jaccardHistConfig} height="380px" />
 
@@ -308,7 +301,7 @@ The per-slot Jaccard is almost everywhere very close to 1.
 
 Mean Jaccard 0.99968. Median 0.99997. p10 (worst 10%) is still 0.9996.
 
-The interesting thing is what makes up the gap. Across the 800 slots:
+What makes up the gap matters more than the Jaccard number itself. Across the 800 slots:
 
 | Metric | Mean | Median | p75 | p90 | Max |
 |---|---:|---:|---:|---:|---:|
@@ -317,13 +310,11 @@ The interesting thing is what makes up the gap. Across the 800 slots:
 | `block_only` | 9.7 | 1 | 3 | 12 | 642 |
 | `gossip_only` | 0 | 0 | 0 | 0 | **0** |
 
-`gossip_only` is zero for every single one of the 800 slots. The gossip-pool view is a strict subset of the block-included view in this sample. Block-side has 7,140 distinct validators that the gossip side never saw for the canonical head; the gossip side has zero unique validators. The 0.25% gap from the previous investigation, broken down, is "block has a few extra voters the sentries missed", not "the two sides see different populations".
-
-This is more informative than the bare count delta. A Jaccard of 0.999 with a balanced symmetric difference would tell a very different story (each side having its own blind spots) from one where the symmetric difference is one-sided. Here it is fully one-sided.
+`gossip_only` is zero for every single one of the 800 slots. The gossip-pool view is a strict subset of the block-included view in this sample. Block-side has 7,140 distinct validators that the gossip side never saw for the canonical head; the gossip side has zero unique validators. The 0.25% gap from the previous investigation is "block has a few extra voters the sentries missed", not "the two sides see different populations". A balanced symmetric difference would point at each side having its own blind spots; this one is fully one-sided.
 
 ### When weighting by effective balance
 
-In Electra, effective balance ranges 32 to 2048 ETH (EIP-7251 compounded validators). 4,560 of the ~964k active validators in the window were compounded (0.47%), with the heaviest at 2048 ETH. So a single missed compounded validator could move the weight delta much more than it moves the count delta.
+Electra effective balance ranges 32 to 2048 ETH (EIP-7251 compounded validators). 4,560 of the ~964k active validators in the window were compounded (0.47%), heaviest at 2048 ETH. So a single missed compounded validator can move the weight delta much more than it moves the count delta.
 
 Per-slot delta in ETH:
 
@@ -333,15 +324,13 @@ Per-slot delta in ETH:
 | gossip weight (ETH) | 1,074,257 | 1,083,750 | 1,098,815 | 1,108,562 | 1,136,311 |
 | `block_only` weight (ETH) | 387 | 32 | 96 | 480 | 22,229 |
 
-The median block-only weight delta is exactly 32 ETH, which lines up with the median count delta of 1 voter: that one voter is a plain 32-ETH validator. The p90 weight delta of 480 ETH against a p90 count delta of 12 voters would be 12 x 32 = 384 ETH if every voter were plain. The actual 480 ETH is about 25% higher, so the typical block-only voter is a bit heavier than vanilla.
+Median block-only weight delta is 32 ETH, matching the median count delta of 1 voter: a plain 32-ETH validator. The p90 weight delta is 480 ETH against a p90 count of 12; 12 plain voters would be 384 ETH. The 25% surplus says the typical block-only voter is a bit heavier than vanilla. Of the 7,751 block-only voter-events, 67 (0.86%) are compounded validators, against an active-validator baseline of 0.47%. Mild enrichment, factor 1.8, absolute share still under 1%. The largest single-slot weight delta is 22,229 ETH on slot 13,285,305 (642 block-only voters, also the worst-Jaccard slot).
 
-A direct check: of the 7,751 block-only voter-events across the 800 slots, 67 (0.86%) involve compounded validators. The active-validator baseline is 0.47% compounded. So the block-only side is mildly enriched in compounded validators (factor of about 1.8) but the absolute share is still well under 1%. The largest single-slot weight delta is 22,229 ETH on slot 13,285,305, which has 642 block-only voters; that is the same slot driving the worst Jaccard.
-
-Weight follows count closely enough that the count picture holds.
+Weight tracks count closely. The count picture holds.
 
 ### When dropping sentries
 
-The 5 sentries do not contribute equally. Each utility sentry (`utility-mainnet-lighthouse-geth-001` and `-003`) was up for every one of the 800 slots and observed at least one aggregate from every one of the 64 committees in every slot. They did not observe every validator: each utility sentry alone captures about 99.97% of the validators that the canonical block records as voting for the head, with a mean shortfall of ~9.7 voters per slot. The other 3 sentries (`xatu-sentry-sfo3-mainnet-lighthouse-nethermind-1d`, `xatu-tysm-ams3-mainnet-003-subnets-0-1`, `xatu-tysm-ams3-mainnet-005-subnets-0-1`) only emitted aggregate-and-proof rows for 255 of the 800 slots (32%). When they were up, they also covered every committee, but their voter sets were a subset of the utility sentries'.
+The 5 sentries do not contribute equally. The two utility sentries (`utility-mainnet-lighthouse-geth-001` and `-003`) were up for all 800 slots and observed at least one aggregate from every one of the 64 committees in every slot. Each one alone captures about 99.97% of the canonical-head voters, with a mean shortfall of ~9.7 voters per slot. The other 3 sentries (`xatu-sentry-sfo3-mainnet-lighthouse-nethermind-1d`, `xatu-tysm-ams3-mainnet-003-subnets-0-1`, `xatu-tysm-ams3-mainnet-005-subnets-0-1`) only emitted aggregate-and-proof rows for 255 of 800 slots (32%); when up, their voter sets were a strict subset of the utility sentries'.
 
 <ECharts config={sentryCumulativeConfig} height="280px" />
 
@@ -353,15 +342,11 @@ The 5 sentries do not contribute equally. Each utility sentry (`utility-mainnet-
 | subnet-attached only (3) | 9,774.1 | 0.32238 | 20,422 |
 | all 5 sentries | 30,186.8 | 0.99968 | 9.7 |
 
-A single utility sentry delivers the same gossip-pool view that all 5 sentries deliver in aggregate. The second utility sentry adds nothing (their voter sets are identical when both are up). The 3 subnet-attached sentries add nothing on top of the utilities; they are a strict subset of what either utility sees. The "5-sentry pipeline" is operationally a 1-sentry pipeline as long as either utility is up. Note that this 1-utility-sentry view still falls short of the block-included view by ~9.7 voters per slot, so being inside one utility sentry's voter set is not the same as being inside the canonical chain.
-
-If the gossip pipeline ran with only the 3 subnet-attached sentries, the picture flips: mean Jaccard against block-included falls to 0.32, mean block-only count is 20,422 per slot. That is because those 3 sentries were only up for 1 in 3 slots in this window; for the other slots the gossip-pool view is empty.
-
-So the gossip-pool view in this window is really a 2-sentry view with 3 mostly-redundant standbys. If the two utility sentries had been down at the same time, the gossip side would have been silent for hundreds of slots in the disagreement window.
+A single utility sentry delivers the same view as all 5 combined. The second utility adds nothing (identical voter sets when both are up). The 3 subnet-attached sentries add nothing on top. The "5-sentry pipeline" is operationally a 1-sentry pipeline as long as either utility is up; if the utilities had been down together, the gossip side would have been silent for hundreds of slots in this window. The 1-utility view still falls short of block-included by ~9.7 voters per slot, so being inside one utility's set is not the same as being inside the canonical chain.
 
 ### When splitting disagreement vs agreement slots
 
-Are the source deltas different on slots where FCR itself disagreed? The previous investigation already pinned the implementation gap to logic, not data, so we shouldn't expect much. This is the confirming check.
+The previous investigation pinned the implementation gap to logic, not data, so we shouldn't expect the source delta to track the FCR disagreement. Confirming check:
 
 | Metric | Disagreement slots (n=400) | Agreement slots (n=400) |
 |---|---:|---:|
@@ -371,18 +356,18 @@ Are the source deltas different on slots where FCR itself disagreed? The previou
 | p90 count delta | 15 | 11 |
 | mean Jaccard | 0.99966 | 0.99970 |
 
-Disagreement slots have a slightly larger source delta (about 0.8 more block-only voters on average, or 50 ETH of weight) but the distributions overlap heavily. The two are heavily skewed with a thin tail and the means are within noise of each other. The source delta is not what carved the 2,388-slot disagreement; the `support_discount` term from the previous investigation is still the actual driver.
+Disagreement slots have a marginally larger source delta (0.8 more block-only voters, 50 ETH of weight). Both distributions are skewed with a thin tail and the means sit within noise. The source delta didn't carve the 2,388-slot disagreement; the `support_discount` term from the previous investigation did.
 
 ### When asking why gossip falls short
 
-A natural follow-up: if a single utility sentry sees every committee yet still misses ~10 voters per slot, what specifically does the sentry miss? Two gossipsub topics carry attestation data on mainnet:
+If a single utility sentry sees every committee yet still misses ~10 voters per slot, what does it miss? Two gossipsub topics carry attestation data on mainnet:
 
 - `beacon_aggregate_and_proof`: designated aggregators broadcast a single aggregate per committee
 - `beacon_attestation_<subnet>`: every validator broadcasts their individual attestation on their committee's subnet
 
-The Teku replay uses only the aggregate-and-proof topic. A subscriber to that topic only sees a validator's vote if (a) an aggregator was selected that included that validator and (b) that aggregator's gossip message reached the sentry. Block proposers subscribe to both topics and additionally pull from their full peer mempool, so they catch every validator.
+The Teku replay uses only the aggregate-and-proof topic. A subscriber sees a validator's vote only if (a) an aggregator was selected that included it and (b) that aggregate-and-proof message reached the sentry. Block proposers subscribe to both topics and pull from their full peer mempool, so they catch every validator.
 
-A five-slot check on the same 5 sentries hinted that switching to `libp2p_gossipsub_beacon_attestation` closes the gap. To make that conclusion stick, we re-ran the comparison on 1,995 sampled slots spread across the disagreement window (every ~98th slot, December 6 2025 to January 2 2026), pulled per-validator first-seen times from the subnet topic, decoded `aggregation_bits` from `libp2p_gossipsub_aggregate_and_proof` against `canonical_beacon_committee`, and lined the three sets up per slot.
+To test the topic-choice claim at scale, we re-ran the comparison on 1,995 sampled slots (every ~98th slot from December 6 2025 to January 2 2026), pulled per-validator first-seen times from the subnet topic, decoded `aggregation_bits` from `libp2p_gossipsub_aggregate_and_proof` against `canonical_beacon_committee`, and lined the three sets up per slot.
 
 Per slot, mean validators voting canonical head:
 
@@ -392,13 +377,13 @@ Per slot, mean validators voting canonical head:
 | Subnet single-attestation (5 sentries) | 30,580 | 30,766 | 30,948 | 31,004 | 59.2 |
 | Aggregate-and-proof (5 sentries) | 30,632 | 30,790 | 30,949 | 30,999 | 8.1 |
 
-Aggregate-and-proof on the larger sample still trails block-included by 8.1 voters per slot on average (p90 = 8 voters, p99 = 153). The block-minus-subnet number is dominated by 165 slots where the subnet stream had a broad outage (mean 59.2 includes a max of 30,611). On the remaining 1,830 "clean" slots the block-minus-subnet mean is 3.1 voters per slot vs block-minus-agg 8.4 voters. So in the typical slot the subnet topic does close most of the gap; the 5-slot finding holds at scale.
+Aggregate-and-proof on the larger sample still trails block-included by 8.1 voters per slot (p90 = 8, p99 = 153). The 59.2 block-minus-subnet mean is dragged up by 165 slots where the subnet stream had a broad outage (max 30,611). On the remaining 1,830 clean slots, block-minus-subnet drops to 3.1 voters per slot vs block-minus-agg 8.4. In a typical slot the subnet topic closes most of the gap.
 
-The mechanism question is the new one. Of the ~8 agg-misses per slot, why didn't the aggregate-and-proof gossip cover them? Three candidate hypotheses:
+That leaves the mechanism. Of the ~8 agg-misses per slot, why didn't aggregate-and-proof gossip cover them? Three hypotheses:
 
-1. **Late subnet arrival.** The validator's subnet attestation arrived after the 8-second aggregation deadline (4s into the slot for the attestation, 8s into the slot for the aggregator to publish). The aggregator on duty for that subnet had nothing to include.
-2. **Aggregator gossip never reached us.** The validator's subnet attestation was on time, an aggregator covered it, but the resulting aggregate-and-proof message never reached any of the 5 sentries.
-3. **Aggregator didn't include them.** The validator was on time on the subnet, but the chosen aggregator built an aggregate that omitted them (e.g. it picked an earlier overlapping aggregate to gossip).
+1. **Late subnet arrival.** The validator's subnet attestation arrived after the 8-second aggregation deadline (4s for the attestation, 8s for the aggregator to publish). The aggregator on duty had nothing to include.
+2. **Aggregator gossip never reached us.** The subnet attestation was on time, an aggregator covered it, but the aggregate-and-proof message never reached any of the 5 sentries.
+3. **Aggregator didn't include them.** The validator was on time on the subnet, but the chosen aggregator built an aggregate that omitted them.
 
 Across the 1,995 slots we found 16,049 agg-miss validators that the subnet topic *did* observe (so timing is available for each). For each, we take the per-validator min `propagation_slot_start_diff` across the 5 sentries.
 
@@ -414,7 +399,7 @@ Across the 1,995 slots we found 16,049 agg-miss validators that the subnet topic
 | p99 | 6,683 ms | 28,911 ms |
 | mean | 4,113 ms | 10,072 ms |
 
-The two distributions barely overlap. Hits cluster in the 3 to 6 second window where validators are *supposed* to attest. Misses cluster after the 8-second aggregation deadline.
+The two distributions barely overlap. Hits cluster in the 3-6 second window where validators are *supposed* to attest. Misses cluster after the 8-second aggregation deadline.
 
 | Threshold | % of agg-hits past | % of agg-misses past |
 |---|---:|---:|
@@ -424,19 +409,15 @@ The two distributions barely overlap. Hits cluster in the 3 to 6 second window w
 | > 12,000 ms | 0.02% | 8.87% |
 | > 16,000 ms | 0.01% | 3.83% |
 
-93.6% of the agg-misses with timing data arrived on the subnet *after* the 8-second aggregation deadline. Only 6.4% (1,022 of 16,049) arrived in time and still failed to make any aggregate-and-proof message we observed. A further 189 agg-misses across the 1,995 slots never appeared on the subnet at any sentry yet were still in the canonical block, which is the only fragment that could be hypothesis 2 or 3 (and the count is tiny: 0.1 per slot).
+93.6% of agg-misses with timing data arrived on the subnet *after* the 8-second deadline. Only 6.4% (1,022 of 16,049) arrived in time and still failed to make any observed aggregate. A further 189 agg-misses (0.1 per slot) never appeared on the subnet at any sentry yet still landed in the canonical block: the only fragment that could be hypothesis 2 or 3.
 
-The verdict: hypothesis 1 wins by an order of magnitude. The bulk of validators that block-included captures but aggregate-and-proof gossip misses are validators whose own subnet attestation arrived too late for an aggregator to include in the on-time aggregate. Block proposers can scoop these up because their inclusion window extends to the next slot's proposal; an aggregate-and-proof subscriber cannot.
-
-This sharpens the topic-choice claim from the 5-slot check. Switching to the single-attestation topic doesn't just see "more" voters; it sees the validators who showed up to vote between 8 and 12 seconds into the slot, after the aggregator deadline closed. A block proposer's view is closer to "subnet attestation, no time bound" than to "aggregate-and-proof gossip". For replaying live aggregator-and-proof behavior the agg topic is the right source; for matching what makes it into the canonical block the subnet topic is the right source.
+Hypothesis 1 wins by an order of magnitude. The validators that block-included captures but aggregate-and-proof gossip misses are mostly ones whose own subnet attestation arrived too late for any aggregator to include. Block proposers scoop them up because their inclusion window extends into the next slot; an aggregate-and-proof subscriber cannot. The single-attestation topic doesn't just see "more" voters, it sees the late attesters who show up between 8 and 12 seconds. For replaying live aggregator behavior, the agg topic is the right source; for matching what makes it into the canonical block, the subnet topic is.
 
 ### When splitting by MEV builder
 
-Block proposers don't all run the same infrastructure. MEV-relay builders run dedicated nodes that subscribe to every attestation subnet, and they have a financial incentive to capture every last attestation they can fit. Locally-built blocks come from the proposer's own consensus client, which is typically subscribed to a small subset of subnets and pulls late attestations only from the gossip mesh it sees. If builders pull more aggressively than a local proposer, MEV-built blocks should show a larger block-minus-agg surplus per slot and a heavier tail of post-deadline subnet first-seen times among their agg-misses.
+MEV-relay builders run dedicated nodes subscribed to every attestation subnet and have a financial incentive to capture every last attestation. Locally-built blocks come from the proposer's own consensus client, which is typically subscribed to a small subset of subnets. If builders pull more aggressively, MEV-built blocks should show a larger block-minus-agg surplus and a heavier post-deadline tail.
 
-To classify, we joined each sample slot's canonical `execution_payload_block_hash` from `canonical_beacon_block` to `mev_relay_proposer_payload_delivered.block_hash` across every tracked relay. A slot was tagged "MEV-built" if a delivered payload's block hash matched the canonical execution payload, and "locally-built" otherwise. 1,824 slots (91.4%) were MEV-built across 8 relays (Ultra Sound, BloXroute Max Profit, Titan, Aestus, BloXroute Regulated, Agnostic Gnosis, EthGas, Flashbots), 167 were locally-built, and 4 slots were unclassifiable (2 had no canonical block row, the other 2 were the canonical-block-missing pair already excluded from the agg-miss timing data).
-
-Per-slot:
+Classification joins each sample slot's canonical `execution_payload_block_hash` from `canonical_beacon_block` to `mev_relay_proposer_payload_delivered.block_hash` across every tracked relay. 1,824 slots (91.4%) were MEV-built across 8 relays (Ultra Sound, BloXroute Max Profit, Titan, Aestus, BloXroute Regulated, Agnostic Gnosis, EthGas, Flashbots), 167 were locally-built, and 4 were unclassifiable.
 
 | Metric | MEV-built (n=1,824) | Locally-built (n=167) |
 |---|---:|---:|
@@ -458,13 +439,11 @@ Subnet first-seen percentiles for the agg-miss set:
 
 <ECharts config={mevSplitHistConfig} height="380px" />
 
-Two things stand out.
+The post-8s deadline share is essentially 100% in both groups: 99.3% MEV, 100.0% local. The earlier 93.6% figure becomes ~100% once we restrict to cleanly classifiable slots; the difference was 2 outlier slots where the canonical block was missing from xatu and contaminated the agg-miss set. Late arrival is structural, not a builder choice.
 
-First: the headline "% of agg-misses past the 8s deadline" is essentially 100% in both groups. The 93.6% from the prior section becomes 99.3% (MEV) and 100.0% (local) once we restrict to slots where MEV classification is even possible. The 6.4 pp gap was driven by 2 outlier slots where the canonical block was missing from xatu (so the agg-miss set was contaminated by what are effectively block-side artifacts). On the cleanly classified sample, virtually every agg-miss with subnet timing arrived after the aggregator deadline closed, regardless of who built the block. The late-arrival mechanism is structural, not a builder choice.
+In the upper tail MEV-built blocks do pull more late voters: p90 of agg-miss first-seen 11.9s vs 10.2s, p99 29.9s vs 24.0s, 9.72% past 12s vs 5.68%, mean block-minus-agg 7.77 vs 6.84. The hypothesis holds in a soft form. Builders capture more late voters than local proposers, but the effect is modest and both groups overwhelmingly source their block-only voters from the post-deadline tail.
 
-Second: among the validators who arrived very late (post-12 seconds and beyond), MEV-built blocks pull in proportionally more of them. The MEV p90 of agg-miss first-seen is 11.9s vs 10.2s for local; p99 is 29.9s vs 24.0s. 9.72% of MEV agg-misses arrived more than 12 seconds into the slot, versus 5.68% of local agg-misses. MEV-built blocks also carry a slightly larger block-minus-agg surplus on average (7.77 vs 6.84). The hypothesis holds in a soft form: builders capture more late voters than local proposers, but the effect is modest, and both groups overwhelmingly source their block-only voters from the post-deadline tail rather than from any "on-time but the aggregator never saw them" failure mode.
-
-A caveat on the local cohort. 167 slots is small enough that the per-bucket counts (e.g. 11 validators in the 24s+ bucket) sit at single-slot resolution. The percentiles up to p75 line up closely with the MEV group; only the upper tail diverges. The block-minus-agg mean difference of 0.93 voters/slot has visible per-slot noise of about ±10 voters, so the population-mean confidence band is loose.
+Caveat: 167 slots is small. The local p25-p75 percentiles match the MEV group closely; only the upper tail diverges. The 0.93 voters/slot mean difference sits inside per-slot noise of about ±10 voters.
 
 </Section>
 
@@ -472,11 +451,9 @@ A caveat on the local cohort. 167 slots is small enough that the per-bucket coun
 
 ## Takeaways
 
-- The ~10-voters-per-slot block-included surplus over aggregate-and-proof gossip is **dominated by late subnet arrivals**, not by sentry coverage or gossip-mesh failures. Across 1,995 sampled slots and 16,049 agg-miss validators with subnet timing, 93.6% arrived on the subnet *after* the 8-second aggregation deadline. The aggregators on duty had nothing to include; block proposers picked these up later because their inclusion window extends into the next slot.
-- Switching to the single-attestation gossip topic (`libp2p_gossipsub_beacon_attestation`) with the same 5 sentries closes most of the gap. On the 1,830 slots without broad subnet outages, block-minus-subnet falls to 3.1 voters per slot vs block-minus-agg 8.4. A subnet subscriber sees the late attesters that an aggregate-and-proof subscriber cannot.
-- Within the aggregate-and-proof-only world, the gossip pipeline in this window is effectively a 1-sentry pipeline. Either utility sentry alone gives mean Jaccard 0.99968 against block-included. The 3 subnet-attached sentries were only up for a third of slots and add nothing when the utilities are up. The second utility sentry also adds nothing.
-- Weight-by-effective-balance tracks the count delta closely. Median delta is 32 ETH = 1 plain validator. Compounded validators are mildly over-represented among block-only (0.86% vs 0.47% baseline) but the absolute share is small enough that the weight picture matches the count picture.
-- Disagreement slots show a marginally larger source delta than agreement slots (mean 10.1 vs 9.3 block-only voters) but the distributions overlap heavily. The data-source gap is not what carved the FCR implementation disagreement, and the gap itself is now traceable: aggregate-and-proof gossip is a structurally on-time view; block-included and single-attestation gossip are not.
-- Splitting by builder type (1,824 MEV-built vs 167 locally-built slots in the 1,991-slot classifiable subset) shows the late-arrival mechanism is structural, not a builder-strategy artifact. Both groups push ~100% of their agg-misses past the 8s deadline. MEV-built blocks do pull in slightly more late tail (p90 first-seen 11.9s vs 10.2s, mean block-minus-agg 7.77 vs 6.84) but the bulk of the block-minus-agg surplus is post-deadline regardless of who built the block.
+- The ~10-voters-per-slot block-included surplus over aggregate-and-proof gossip is dominated by **late subnet arrivals**, not sentry coverage or gossip-mesh failures. 93.6% of agg-misses with timing data arrived on the subnet after the 8-second aggregation deadline; the MEV/local split pushes that to ~100% on cleanly classifiable slots. Block proposers (MEV-built and local alike) scoop these up because their inclusion window extends into the next slot.
+- Switching to the single-attestation gossip topic (`libp2p_gossipsub_beacon_attestation`) with the same 5 sentries closes most of the gap. On the 1,830 slots without broad subnet outages, block-minus-subnet is 3.1 voters/slot vs block-minus-agg 8.4. Aggregate-and-proof gossip is a structurally on-time view; block-included and single-attestation gossip are not.
+- The 5-sentry gossip pipeline is operationally a 1-sentry pipeline. Either utility sentry alone gives mean Jaccard 0.99968 against block-included; the second utility and all 3 subnet-attached sentries add nothing on top. Weight-by-effective-balance tracks count closely (median delta 32 ETH = 1 plain validator).
+- The source delta does not track the FCR disagreement. Disagreement and agreement slots show indistinguishable per-slot count/weight distributions. The 1.15 pp implementation gap is still the `support_discount` term from the previous investigation, not the choice of data source.
 
 </Section>
