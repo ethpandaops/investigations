@@ -42,15 +42,15 @@ tags:
         }]
     };
 
-    const thresholdComponents = [
-        { name: 'Lighthouse', max_support: 2227064, support: 1660301, proposer: 445412, adversarial: 556766, discount: 0, threshold: 1893004, verdict: 'FAIL by 233k ETH' },
-        { name: 'Teku',       max_support: 2227064, support: 1654605, proposer: 445412, adversarial: 556766, discount: 544432, threshold: 1620788, verdict: 'PASS by 34k ETH' }
+    const thresholdRows = [
+        { name: 'Lighthouse', support: 1660301, threshold: 1893004, passes: false },
+        { name: 'Teku',       support: 1654605, threshold: 1620788, passes: true  }
     ];
 
     $: thresholdConfig = (() => {
-        const names = thresholdComponents.map(r => r.name);
+        const categories = thresholdRows.map(r => r.name);
         return {
-            title: { text: 'Slot 13,184,078: safety threshold breakdown', left: 'center', textStyle: { fontSize: 13 } },
+            title: { text: 'Slot 13,184,078: support vs safety threshold (ETH)', left: 'center', textStyle: { fontSize: 13 } },
             tooltip: {
                 trigger: 'axis',
                 axisPointer: { type: 'shadow' },
@@ -60,23 +60,25 @@ tags:
                     return html;
                 }
             },
-            legend: { data: ['proposer_score', 'adversarial_weight', 'support_discount', 'support'], top: 25 },
-            grid: { left: 100, right: 30, bottom: 70, top: 70 },
-            xAxis: { type: 'value', name: 'ETH', nameLocation: 'center', nameGap: 35, axisLabel: { formatter: (v) => (v/1e6).toFixed(1)+'M' } },
-            yAxis: { type: 'category', data: names },
+            legend: { data: ['support', 'safety_threshold'], top: 25 },
+            grid: { left: 110, right: 110, top: 70, bottom: 55 },
+            xAxis: { type: 'value', name: 'ETH', nameLocation: 'center', nameGap: 30, min: 1500000, max: 2000000, axisLabel: { formatter: (v) => (v/1e6).toFixed(2)+'M' } },
+            yAxis: { type: 'category', data: categories },
             series: [
-                { name: 'proposer_score', type: 'bar', stack: 'threshold', itemStyle: { color: '#9333ea' }, data: thresholdComponents.map(r => r.proposer) },
-                { name: 'adversarial_weight', type: 'bar', stack: 'threshold', itemStyle: { color: '#dc2626' }, data: thresholdComponents.map(r => r.adversarial) },
-                { name: 'support_discount', type: 'bar', stack: 'threshold', itemStyle: { color: '#ea580c' }, data: thresholdComponents.map(r => -r.discount), label: { show: true, formatter: (p) => p.value === 0 ? '0' : (Number(p.value)/1000).toFixed(0)+'k', position: 'inside' } },
-                { name: 'support', type: 'bar', itemStyle: { color: '#16a34a' }, data: thresholdComponents.map(r => r.support), markLine: {
-                    silent: true,
-                    symbol: 'none',
-                    lineStyle: { type: 'dashed', color: '#000' },
-                    data: [
-                        { name: 'Lighthouse threshold (1.893M)', xAxis: 1893004, label: { show: true, formatter: 'LH threshold', position: 'insideEndTop' } },
-                        { name: 'Teku threshold (1.621M)',       xAxis: 1620788, label: { show: true, formatter: 'Teku threshold', position: 'insideEndBottom' } }
-                    ]
-                } }
+                {
+                    name: 'support',
+                    type: 'bar',
+                    itemStyle: { color: '#16a34a' },
+                    data: thresholdRows.map(r => r.support),
+                    label: { show: true, position: 'right', formatter: (p) => (Number(p.value)/1e6).toFixed(3)+'M' },
+                    barGap: '20%'
+                },
+                {
+                    name: 'safety_threshold',
+                    type: 'bar',
+                    data: thresholdRows.map(r => ({ value: r.threshold, itemStyle: { color: r.passes ? '#a3a3a3' : '#dc2626' } })),
+                    label: { show: true, position: 'right', formatter: (p) => (Number(p.value)/1e6).toFixed(3)+'M' }
+                }
             ]
         };
     })();
@@ -220,9 +222,9 @@ We ran the Lighthouse engine with `RUST_LOG=beacon_chain::fast_confirmation=debu
 
 Every component agrees except `support_discount`. Teku subtracts 544,432 ETH from its threshold; Lighthouse subtracts zero. The size of that delta is not a coincidence: it equals the weight of the 16,194 validators that voted for the parent at slot 78's deadline.
 
-<ECharts config={thresholdConfig} height="320px" />
+<ECharts config={thresholdConfig} height="260px" />
 
-The chart makes the picture concrete. Both implementations agree on the components going **into** the threshold (proposer_score + adversarial_weight). They disagree on the discount coming **out**. With Teku's larger discount the threshold drops below the support and the block confirms; with no discount the threshold sits above support and the block fails.
+Both implementations agree on the components going into the threshold (proposer_score + adversarial_weight). They disagree on the discount coming out, and that disagreement moves the threshold by 272k ETH. The support values are within 5,696 ETH of each other; what changes the verdict is which side of the threshold support lands on.
 
 ### When reading the spec
 
