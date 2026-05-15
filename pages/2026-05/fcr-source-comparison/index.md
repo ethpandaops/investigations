@@ -40,51 +40,6 @@ tags:
         }]
     };
 
-    const sentryGroups = [
-        { label: 'utility-001 alone', mean: 30186.8 },
-        { label: 'utility-003 alone', mean: 30186.8 },
-        { label: 'utility-001 + 003 (2)', mean: 30186.8 },
-        { label: 'subnet-attached (3)', mean: 9774.1 },
-        { label: 'all 5 sentries', mean: 30186.8 }
-    ];
-    const blockMean = 30196.5;
-
-    $: sentryCumulativeConfig = {
-        title: { text: 'Mean canonical-head voter union across 800 slots, by sentry subset', left: 'center', textStyle: { fontSize: 13 } },
-        tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' }, formatter: (params) => {
-            let html = `<b>${params[0].axisValue}</b><br/>`;
-            params.forEach(p => { html += `${p.marker} ${p.seriesName}: ${Number(p.value).toLocaleString()}<br/>`; });
-            return html;
-        }},
-        grid: { left: 200, right: 120, top: 60, bottom: 50 },
-        xAxis: { type: 'value', name: 'mean validators in union', nameLocation: 'center', nameGap: 30, min: 0, max: 32000 },
-        yAxis: { type: 'category', data: sentryGroups.map(d => d.label) },
-        series: [
-            {
-                name: 'gossip-pool union',
-                type: 'bar',
-                data: sentryGroups.map(d => d.mean),
-                itemStyle: { color: '#2563eb' },
-                label: { show: true, position: 'right', formatter: (p) => Number(p.value).toLocaleString() },
-                markLine: {
-                    silent: true,
-                    symbol: 'none',
-                    label: { formatter: 'block-included mean: 30,196.5', position: 'insideEndTop', fontSize: 11, color: '#16a34a' },
-                    lineStyle: { color: '#16a34a', type: 'dashed' },
-                    data: [{ xAxis: blockMean }]
-                }
-            }
-        ]
-    };
-
-    const slicesData = [
-        { metric: 'mean count delta',  disagreement: 10.1, agreement: 9.3 },
-        { metric: 'mean weight delta (ETH)', disagreement: 412.7, agreement: 362.0 },
-        { metric: 'p75 count delta', disagreement: 4, agreement: 3 },
-        { metric: 'p90 count delta', disagreement: 15, agreement: 11 },
-        { metric: 'mean Jaccard',    disagreement: 0.99966, agreement: 0.99970 }
-    ];
-
     // Subnet first-seen timing distribution: agg-hits vs agg-misses
     // 1,995 sample slots, 60,991,928 hit voter-events, 16,049 miss voter-events
     const timingBuckets = [
@@ -228,7 +183,7 @@ tags:
 
 ## Question
 
-The [previous investigation](../fcr-implementation-divergence/) sampled 299 slots and put the gap between the two FCR attestation sources at about 0.25% of committee. That was a single per-slot count, which is coarse. Does the conclusion hold at a finer grain — how do the two sets overlap, what changes when you weight by effective balance, and how much of the gossip view depends on having all 5 sentries up?
+The [previous investigation](../fcr-implementation-divergence/) sampled 299 slots and put the gap between the two FCR attestation sources at about 0.25% of committee. That was a single per-slot count, which is coarse. Does the conclusion hold at a finer grain: how do the two sets overlap, what changes when you weight by effective balance, and how much of the gossip view depends on having all 5 sentries up?
 
 </Section>
 
@@ -275,47 +230,7 @@ Mean Jaccard 0.99968, median 0.99997, p10 still 0.9996.
 | `block_only` | 9.7 | 1 | 3 | 12 | 642 |
 | `gossip_only` | 0 | 0 | 0 | 0 | **0** |
 
-`gossip_only` is zero on every one of the 800 slots — gossip is a strict subset of block-included. The 0.25% gap is "block has a few extra voters the sentries missed," not "the two sides see different populations."
-
-### When weighting by effective balance
-
-Electra effective balances range 32 to 2048 ETH (EIP-7251). 4,560 of the ~964k active validators are compounded (0.47%), so a single missed compounded validator can move weight far more than count.
-
-| Metric | Mean | Median | p75 | p90 | Max |
-|---|---:|---:|---:|---:|---:|
-| block weight (ETH) | 1,074,645 | 1,083,883 | 1,098,978 | 1,109,046 | 1,140,343 |
-| gossip weight (ETH) | 1,074,257 | 1,083,750 | 1,098,815 | 1,108,562 | 1,136,311 |
-| `block_only` weight (ETH) | 387 | 32 | 96 | 480 | 22,229 |
-
-Median block-only weight 32 ETH matches median count 1 — a plain validator. Compounded share of block-only events is 0.86% vs 0.47% baseline (1.8× enrichment, still under 1%). Weight tracks count.
-
-### When dropping sentries
-
-The 5 sentries don't contribute equally. Two utility sentries (`utility-mainnet-lighthouse-geth-001` / `-003`) were up for all 800 slots and saw every committee. The other 3 (`xatu-sentry-sfo3-mainnet-lighthouse-nethermind-1d`, `xatu-tysm-ams3-mainnet-003-subnets-0-1`, `xatu-tysm-ams3-mainnet-005-subnets-0-1`) only emitted rows for 255/800 slots, and their voter sets were always a subset.
-
-<ECharts config={sentryCumulativeConfig} height="280px" />
-
-| Sentry subset | Mean voters in union | Mean Jaccard vs block | Mean `block_only` |
-|---|---:|---:|---:|
-| utility-001 alone | 30,186.8 | 0.99968 | 9.7 |
-| utility-003 alone | 30,186.8 | 0.99968 | 9.7 |
-| utility-001 + 003 (2) | 30,186.8 | 0.99968 | 9.7 |
-| subnet-attached only (3) | 9,774.1 | 0.32238 | 20,422 |
-| all 5 sentries | 30,186.8 | 0.99968 | 9.7 |
-
-The "5-sentry pipeline" is operationally a 1-sentry pipeline as long as either utility is up.
-
-### When splitting disagreement vs agreement slots
-
-| Metric | Disagreement slots (n=400) | Agreement slots (n=400) |
-|---|---:|---:|
-| mean count delta (block − gossip) | 10.1 | 9.3 |
-| mean weight delta (ETH) | 413 | 362 |
-| p75 count delta | 4 | 3 |
-| p90 count delta | 15 | 11 |
-| mean Jaccard | 0.99966 | 0.99970 |
-
-The 0.8-voter and 50-ETH gaps sit inside per-slot noise. The source delta didn't carve the disagreement set; `support_discount` did.
+`gossip_only` is zero on every one of the 800 slots; gossip is a strict subset of block-included. The 0.25% gap is "block has a few extra voters the sentries missed," not "the two sides see different populations."
 
 ### When asking why gossip falls short
 
@@ -379,9 +294,8 @@ Post-8s share is ~100% in both groups; late arrival is structural, not a builder
 
 ## Takeaways
 
-- The ~10-voters-per-slot block-included surplus over aggregate-and-proof gossip is dominated by **late subnet arrivals**. 93.6% of agg-misses with timing data landed on the subnet after the 8-second aggregation deadline; on cleanly classifiable slots it's ~100%.
+- The ~10-voters-per-slot block-included surplus over aggregate-and-proof gossip is dominated by late subnet arrivals. 93.6% of agg-misses with timing data landed on the subnet after the 8-second aggregation deadline; on cleanly classifiable slots it's ~100%.
 - The single-attestation topic closes most of the gap (block-minus-subnet 3.1 vs block-minus-agg 8.4 on clean slots). Agg-and-proof is a structurally on-time view; block-included and single-attestation aren't.
-- The 5-sentry pipeline is operationally a 1-sentry pipeline. Either utility sentry alone gives mean Jaccard 0.99968; the other 4 add nothing. Weight tracks count (median delta 32 ETH = 1 plain validator).
 - The source delta does not track the FCR disagreement. The 1.15 pp gap is still `support_discount`, not the data source.
 
 </Section>
