@@ -61,11 +61,9 @@ tags:
         { client: 'nimbus',     topic: 'head_v2',                     result: 'rejected', detail: '400: Invalid topics value' },
         { client: 'nimbus',     topic: 'execution_payload_bid',       result: 'silent',   detail: '200, no events in 120s' },
         { client: 'nimbus',     topic: 'payload_attestation_message', result: 'silent',   detail: '200, no events in 120s' },
-        { client: 'nimbus',     topic: 'proposer_preferences',        result: 'silent',   detail: '200, no events in 120s' },
-        { client: 'prysm',      topic: 'head_v2',                     result: 'emits',    detail: 'events with payload_status seen immediately' },
-        { client: 'teku',       topic: 'head_v2',                     result: 'emits',    detail: 'events with payload_status seen immediately' }
+        { client: 'nimbus',     topic: 'proposer_preferences',        result: 'silent',   detail: '200, no events in 120s' }
     ];
-    const probeIcon = { emits: '✅', silent: '⚠️', rejected: '❌' };
+    const probeIcon = { silent: '⚠️', rejected: '❌' };
 
     function fmtCount(n) {
         if (n >= 1e6) return (n / 1e6).toFixed(1) + 'M';
@@ -175,7 +173,7 @@ The `head_v2` row is different from the rest: Glamsterdam added it to the event 
 
 ### Probing the gaps
 
-To pin down what each missing cell actually means, we probed every missing client and event pair directly on 2026-07-10: one node per client, `curl /eth/v1/events?topics=<topic>` held open over SSH for 20 seconds, and 120 seconds (10 slots) wherever the stream stayed silent. Note the SSE topic for payload attestations is `payload_attestation_message` per the spec; Xatu just stores it as `payload_attestation`.
+To pin down what each missing cell actually means, we probed every missing client and event pair directly on 2026-07-10: one node per client, `curl /eth/v1/events?topics=<topic>` held open over SSH for 20 seconds, and 120 seconds (10 slots) wherever the stream stayed silent. The same probe against prysm and teku is what fills the `head_v2` row in the matrix above; both emit it with `payload_status` immediately. Note the SSE topic for payload attestations is `payload_attestation_message` per the spec; Xatu just stores it as `payload_attestation`.
 
 <table class="matrix-table">
     <thead>
