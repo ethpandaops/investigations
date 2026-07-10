@@ -1,7 +1,7 @@
 ---
 title: XEN Mint Waves and Client newPayload Divergence
 sidebar_position: 1
-description: A XEN batch-mint spam wave made geth, nethermind, reth and besu 2-3x slower at newPayload while ethrex didn't flinch — same gas, very different pain
+description: A XEN batch-mint spam wave made geth, nethermind, reth and besu 2-3x slower at newPayload while ethrex didn't flinch. Same gas, very different pain
 date: 2026-07-10T06:00:00Z
 author: samcm
 tags:
@@ -52,17 +52,17 @@ tags:
             byEl[d.el][d.hour_label] = Number(d.p50_ms);
         });
         return {
-            title: { text: 'newPayload p50 by Client — utility 7870 nodes', subtext: 'Hourly median of VALID responses, 2026-07-08 to 2026-07-10 UTC', left: 'center', textStyle: { fontSize: 15, fontWeight: 600 }, subtextStyle: { fontSize: 11, color: '#888' } },
+            title: { text: 'newPayload p50 by Client (utility 7870 nodes)', subtext: 'Hourly median of VALID responses, 2026-07-08 to 2026-07-10 UTC', left: 'center', textStyle: { fontSize: 15, fontWeight: 600 }, subtextStyle: { fontSize: 11, color: '#888' } },
             tooltip: { trigger: 'axis', valueFormatter: v => (v == null ? 'n/a' : Number(v).toFixed(0) + 'ms') },
             legend: { data: els, top: 44, type: 'scroll' },
-            grid: { left: 12, right: 22, bottom: 70, top: 92, containLabel: true },
+            grid: { left: 48, right: 22, bottom: 70, top: 92, containLabel: true },
             xAxis: { type: 'category', data: hours, axisLabel: { interval: 3, rotate: 45, fontSize: 9 }, name: 'Hour (UTC)', nameLocation: 'center', nameGap: 55 },
             yAxis: { type: 'value', name: 'p50 duration (ms)', nameLocation: 'center', nameGap: 42, nameRotate: 90 },
             series: els.map(el => lineFor(el, hours.map(h => byEl[el]?.[h] ?? null)))
         };
     })();
 
-    // Chart 2: same client (geth), three clusters — rules out hardware
+    // Chart 2: same client (geth), three clusters, rules out hardware
     $: clusterConfig = (() => {
         if (!np_hourly || np_hourly.length === 0 || np_hourly[0].hour_label == null) return {};
         const rows = np_hourly.filter(d => d.el === 'go-ethereum');
@@ -75,10 +75,10 @@ tags:
             byCluster[d.cluster][d.hour_label] = Number(d.p50_ms);
         });
         return {
-            title: { text: 'Same Client, Three Datacenters — geth', subtext: 'Hourly newPayload p50 per cluster. The spike hits all clusters at once, so it is not hardware.', left: 'center', textStyle: { fontSize: 15, fontWeight: 600 }, subtextStyle: { fontSize: 11, color: '#888' } },
+            title: { text: 'Same Client, Three Datacenters (geth)', subtext: 'Hourly newPayload p50 per cluster. The spike hits all clusters at once, so it is not hardware.', left: 'center', textStyle: { fontSize: 15, fontWeight: 600 }, subtextStyle: { fontSize: 11, color: '#888' } },
             tooltip: { trigger: 'axis', valueFormatter: v => (v == null ? 'n/a' : Number(v).toFixed(0) + 'ms') },
             legend: { data: clusters, top: 44 },
-            grid: { left: 12, right: 22, bottom: 70, top: 92, containLabel: true },
+            grid: { left: 48, right: 22, bottom: 70, top: 92, containLabel: true },
             xAxis: { type: 'category', data: hours, axisLabel: { interval: 3, rotate: 45, fontSize: 9 }, name: 'Hour (UTC)', nameLocation: 'center', nameGap: 55 },
             yAxis: { type: 'value', name: 'p50 duration (ms)', nameLocation: 'center', nameGap: 42, nameRotate: 90 },
             series: clusters.map(c => ({
@@ -89,46 +89,33 @@ tags:
         };
     })();
 
-    // Chart 3: 5-minute zoom, utility, incident window
-    $: zoomConfig = (() => {
-        if (!np_5min || np_5min.length === 0 || np_5min[0].bucket_label == null) return {};
-        const buckets = [...new Set(np_5min.map(d => d.bucket_label))];
-        const els = CLIENT_ORDER.filter(el => np_5min.some(d => d.el === el));
+    // Chart 2b: host CPU temperatures, one dedicated host per client
+    $: tempConfig = (() => {
+        if (!host_temps || host_temps.length === 0 || host_temps[0].ts_label == null) return {};
+        const ticks = [...new Set(host_temps.map(d => d.ts_label))];
+        const els = CLIENT_ORDER.filter(el => host_temps.some(d => d.client === el));
         const byEl = {};
-        np_5min.forEach(d => {
-            if (!byEl[d.el]) byEl[d.el] = {};
-            byEl[d.el][d.bucket_label] = Number(d.p50_ms);
+        host_temps.forEach(d => {
+            if (!byEl[d.client]) byEl[d.client] = {};
+            byEl[d.client][d.ts_label] = Number(d.cpu_c);
         });
+        const series = els.map(el => lineFor(el, ticks.map(t => byEl[el]?.[t] ?? null)));
+        series[0].markArea = {
+            itemStyle: { color: 'rgba(220, 38, 38, 0.07)' },
+            data: [[{ xAxis: '07-09 08:45' }, { xAxis: '07-09 10:45' }]]
+        };
         return {
-            title: { text: 'The Bursts Up Close — utility, 08:00-12:00 UTC', subtext: '5-minute newPayload p50. Waves of ~10-25 minutes with sharp returns to baseline.', left: 'center', textStyle: { fontSize: 15, fontWeight: 600 }, subtextStyle: { fontSize: 11, color: '#888' } },
-            tooltip: { trigger: 'axis', valueFormatter: v => (v == null ? 'n/a' : Number(v).toFixed(0) + 'ms') },
+            title: { text: 'Host CPU Temperature (one dedicated host per client)', subtext: 'k10temp Tctl, 15-minute samples. Shaded band marks the incident window.', left: 'center', textStyle: { fontSize: 15, fontWeight: 600 }, subtextStyle: { fontSize: 11, color: '#888' } },
+            tooltip: { trigger: 'axis', valueFormatter: v => (v == null ? 'n/a' : Number(v).toFixed(1) + '°C') },
             legend: { data: els, top: 44, type: 'scroll' },
-            grid: { left: 12, right: 22, bottom: 60, top: 92, containLabel: true },
-            xAxis: { type: 'category', data: buckets, axisLabel: { interval: 5, rotate: 45, fontSize: 9 }, name: 'Time (UTC)', nameLocation: 'center', nameGap: 45 },
-            yAxis: { type: 'value', name: 'p50 duration (ms)', nameLocation: 'center', nameGap: 42, nameRotate: 90 },
-            series: els.map(el => lineFor(el, buckets.map(b => byEl[el]?.[b] ?? null)))
+            grid: { left: 48, right: 22, bottom: 70, top: 92, containLabel: true },
+            xAxis: { type: 'category', data: ticks, axisLabel: { interval: 15, rotate: 45, fontSize: 9 }, name: 'Time (UTC)', nameLocation: 'center', nameGap: 55 },
+            yAxis: { type: 'value', min: 40, max: 85, name: 'CPU temperature (°C)', nameLocation: 'center', nameGap: 42, nameRotate: 90, axisLabel: { formatter: '{value}°' } },
+            series
         };
     })();
 
-    // Chart 4: workload was flat — avg mgas per 5-min bucket
-    $: workloadConfig = (() => {
-        if (!workload_5min || workload_5min.length === 0 || workload_5min[0].bucket_label == null) return {};
-        const buckets = workload_5min.map(d => d.bucket_label);
-        return {
-            title: { text: 'Meanwhile, the Workload Never Moved', subtext: 'Average gas per block in the same 5-minute buckets — flat at ~30 Mgas throughout', left: 'center', textStyle: { fontSize: 15, fontWeight: 600 }, subtextStyle: { fontSize: 11, color: '#888' } },
-            tooltip: { trigger: 'axis', valueFormatter: v => Number(v).toFixed(1) + ' Mgas' },
-            grid: { left: 12, right: 22, bottom: 60, top: 70, containLabel: true },
-            xAxis: { type: 'category', data: buckets, axisLabel: { interval: 5, rotate: 45, fontSize: 9 }, name: 'Time (UTC)', nameLocation: 'center', nameGap: 45 },
-            yAxis: { type: 'value', name: 'Avg gas per block (Mgas)', nameLocation: 'center', nameGap: 40, nameRotate: 90, max: 60 },
-            series: [{
-                name: 'Avg Mgas/block', type: 'bar', barCategoryGap: '20%',
-                data: workload_5min.map(d => Number(d.avg_mgas)),
-                itemStyle: { color: '#2563eb', borderRadius: [4, 4, 0, 0] }
-            }]
-        };
-    })();
-
-    // Chart 5: grouped bar — median duration with vs without XEN txs, per client
+    // Chart 5: grouped bar of median duration with vs without XEN txs, per client
     $: actorSplitConfig = (() => {
         if (!actor_split || actor_split.length === 0 || actor_split[0].el == null) return {};
         const els = CLIENT_ORDER.filter(el => actor_split.some(d => d.el === el));
@@ -138,8 +125,8 @@ tags:
             title: { text: 'Same Minutes, Split by Block Content', subtext: 'Median newPayload duration during the spike (09:00-11:00 UTC), utility nodes', left: 'center', textStyle: { fontSize: 15, fontWeight: 600 }, subtextStyle: { fontSize: 11, color: '#888' } },
             tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' }, valueFormatter: v => (v == null ? 'n/a' : Number(v).toFixed(0) + 'ms') },
             legend: { data: ['Block contains XEN mint tx', 'Clean block'], top: 44 },
-            grid: { left: 12, right: 22, bottom: 50, top: 92, containLabel: true },
-            xAxis: { type: 'category', data: els, name: 'Execution client', nameLocation: 'center', nameGap: 32 },
+            grid: { left: 48, right: 22, bottom: 50, top: 92, containLabel: true },
+            xAxis: { type: 'category', data: els, axisLabel: { interval: 0 }, name: 'Execution client', nameLocation: 'center', nameGap: 32 },
             yAxis: { type: 'value', name: 'Median duration (ms)', nameLocation: 'center', nameGap: 42, nameRotate: 90 },
             series: [
                 { name: 'Block contains XEN mint tx', type: 'bar', data: withXen, itemStyle: { color: C_XEN, borderRadius: [4, 4, 0, 0] }, barGap: '10%', label: { show: true, position: 'top', fontSize: 10, formatter: p => p.value + 'ms' } },
@@ -148,7 +135,16 @@ tags:
         };
     })();
 
-    // Chart 6: scatter small-multiples — duration vs block gas, geth and ethrex
+    // Chart 6: scatter comparison of duration vs block gas, selectable client vs ethrex
+    const MS_COLS = {
+        'go-ethereum': 'geth_ms',
+        'Nethermind': 'nethermind_ms',
+        'Reth': 'reth_ms',
+        'Besu': 'besu_ms',
+        'erigon': 'erigon_ms'
+    };
+    let compareEl = 'Nethermind';
+
     const scatterFor = (rows, title, msCol) => {
         if (!rows || rows.length === 0 || rows[0].block_number == null) return {};
         const mk = (pred) => rows.filter(pred).map(d => [Number(d.mgas), Number(d[msCol])]);
@@ -156,7 +152,7 @@ tags:
             title: { text: title, left: 'center', textStyle: { fontSize: 13, fontWeight: 600 } },
             tooltip: { trigger: 'item', formatter: p => `${p.value[0]} Mgas → ${p.value[1]}ms` },
             legend: { data: ['Contains XEN mint tx', 'Clean block'], top: 28 },
-            grid: { left: 12, right: 18, bottom: 50, top: 66, containLabel: true },
+            grid: { left: 48, right: 18, bottom: 50, top: 66, containLabel: true },
             xAxis: { type: 'value', name: 'Block gas (Mgas)', nameLocation: 'center', nameGap: 30, max: 60 },
             yAxis: { type: 'value', name: 'newPayload (ms)', nameLocation: 'center', nameGap: 40, nameRotate: 90, max: 300 },
             series: [
@@ -165,10 +161,31 @@ tags:
             ]
         };
     };
-    $: gethScatterConfig = scatterFor(blocks_joined, 'geth: XEN blocks off the trend', 'geth_ms');
+    $: compareScatterConfig = scatterFor(blocks_joined, compareEl + ': XEN blocks off the trend', MS_COLS[compareEl]);
     $: ethrexScatterConfig = scatterFor(blocks_joined, 'ethrex: XEN blocks on the trend', 'ethrex_ms');
 
-    // Chart 7: opcode profile — horizontal bar
+    // Chart 6b: XEN blocks only, every client on the same axes
+    $: allXenScatterConfig = (() => {
+        if (!blocks_joined || blocks_joined.length === 0 || blocks_joined[0].block_number == null) return {};
+        const xen = blocks_joined.filter(d => Number(d.actor_mgas) > 0);
+        const cols = { ...MS_COLS, 'ethrex': 'ethrex_ms' };
+        const els = CLIENT_ORDER.filter(el => xen.some(d => Number(d[cols[el]]) > 0));
+        return {
+            title: { text: 'XEN Blocks Only: Every Client, Same Blocks', subtext: 'Each point is one XEN-carrying block during the spike (09:00-11:00 UTC), utility nodes', left: 'center', textStyle: { fontSize: 15, fontWeight: 600 }, subtextStyle: { fontSize: 11, color: '#888' } },
+            tooltip: { trigger: 'item', formatter: p => `${p.seriesName}: ${p.value[0]} Mgas → ${p.value[1]}ms` },
+            legend: { data: els, top: 44, type: 'scroll' },
+            grid: { left: 48, right: 22, bottom: 50, top: 92, containLabel: true },
+            xAxis: { type: 'value', name: 'Block gas (Mgas)', nameLocation: 'center', nameGap: 30, max: 60 },
+            yAxis: { type: 'log', logBase: 10, min: 5, name: 'newPayload (ms, log scale)', nameLocation: 'center', nameGap: 42, nameRotate: 90 },
+            series: els.map(el => ({
+                name: el, type: 'scatter', symbolSize: 5, z: el === 'ethrex' ? 3 : 2,
+                data: xen.filter(d => Number(d[cols[el]]) > 0).map(d => [Number(d.mgas), Number(d[cols[el]])]),
+                itemStyle: { color: CLIENT_COLORS[el], opacity: 0.6 }
+            }))
+        };
+    })();
+
+    // Chart 7: opcode profile, horizontal bar
     $: opcodeConfig = (() => {
         if (!opcode_profile || opcode_profile.length === 0 || opcode_profile[0].operation == null) return {};
         const rows = [...opcode_profile].sort((a, b) => Number(a.mgas_self) - Number(b.mgas_self));
@@ -196,7 +213,7 @@ tags:
         return {
             title: { text: 'This Was Not a One-Off', subtext: 'Daily gas consumed by the three XEN batch-mint contracts (dates approximated from block numbers)', left: 'center', textStyle: { fontSize: 15, fontWeight: 600 }, subtextStyle: { fontSize: 11, color: '#888' } },
             tooltip: { trigger: 'axis', valueFormatter: v => Number(v).toFixed(1) + ' Ggas' },
-            grid: { left: 12, right: 22, bottom: 60, top: 70, containLabel: true },
+            grid: { left: 48, right: 22, bottom: 60, top: 70, containLabel: true },
             xAxis: { type: 'category', data: days, axisLabel: { rotate: 45, fontSize: 9 }, name: 'Date (approx, UTC)', nameLocation: 'center', nameGap: 55 },
             yAxis: { type: 'value', name: 'Gas per day (Ggas)', nameLocation: 'center', nameGap: 40, nameRotate: 90 },
             series: [{
@@ -221,12 +238,8 @@ tags:
 select * from xatu.xen_np_hourly order by hour, cluster, el
 ```
 
-```sql np_5min
-select * from xatu.xen_np_5min order by bucket, el
-```
-
-```sql workload_5min
-select * from xatu.xen_workload_5min order by bucket
+```sql host_temps
+select * from static.xen_host_temps order by ts, host
 ```
 
 ```sql blocks_joined
@@ -238,6 +251,28 @@ select
     coalesce(a.actor_txs, 0) as actor_txs
 from xatu.xen_block_durations d
 left join xatu.xen_actor_blocks a on d.block_number = a.block_number
+```
+
+```sql defer_check
+with seq as (
+    select
+        d.block_number,
+        d.ethrex_ms,
+        coalesce(a.actor_mgas, 0) > 0 as is_xen,
+        lag(coalesce(a.actor_mgas, 0) > 0) over (order by d.block_number) as prev_is_xen,
+        lag(d.block_number) over (order by d.block_number) as prev_block
+    from xatu.xen_block_durations d
+    left join xatu.xen_actor_blocks a on d.block_number = a.block_number
+)
+select
+    case when is_xen then 'XEN block' else 'Clean block' end as this_block,
+    case when prev_is_xen then 'after a XEN block' else 'after a clean block' end as coming,
+    count(*) as blocks,
+    round(median(ethrex_ms), 0) as ethrex_median_ms
+from seq
+where ethrex_ms > 0 and prev_block = block_number - 1
+group by 1, 2
+order by 1, 2
 ```
 
 ```sql actor_split
@@ -260,19 +295,6 @@ from (
 where ms > 0
 group by el, grp
 order by el, grp
-```
-
-```sql small_slow
-select
-    d.block_number,
-    d.mgas,
-    coalesce(a.actor_mgas, 0) as actor_mgas,
-    coalesce(a.actor_txs, 0) as actor_txs,
-    d.geth_ms, d.nethermind_ms, d.reth_ms, d.ethrex_ms
-from xatu.xen_block_durations d
-left join xatu.xen_actor_blocks a on d.block_number = a.block_number
-where d.mgas < 20 and d.nethermind_ms > 80
-order by d.block_number
 ```
 
 ```sql throughput_pivot
@@ -321,13 +343,13 @@ On 2026-07-09, geth, nethermind, reth and besu all slowed down 2-3x on the EIP-7
 
 ## Background
 
-The [EIP-7870](https://eips.ethereum.org/EIPS/eip-7870) fleet runs every major execution client on identical reference hardware (Hetzner AX52) across three independent datacenters — `utility`, `sigma` and `berlin`. Each node pairs an EL with [tysm](https://github.com/ethpandaops/tysm), which times every `engine_newPayload` call and ships the measurement to Xatu (`consensus_engine_api_new_payload`). An [engine snooper](https://github.com/ethpandaops/xatu) sitting between CL and EL independently records the same calls from the EL side (`execution_engine_new_payload`).
+The [EIP-7870](https://eips.ethereum.org/EIPS/eip-7870) fleet runs every major execution client in three independently operated clusters: `utility`, `sigma` and `berlin`. The clusters sit in different datacenters on different hardware, which makes cross-cluster comparison a clean hardware control. Each node pairs an EL with [tysm](https://github.com/ethpandaops/tysm), which times every `engine_newPayload` call and ships the measurement to Xatu (`consensus_engine_api_new_payload`). An [engine snooper](https://github.com/ethpandaops/xatu) sitting between CL and EL independently records the same calls from the EL side (`execution_engine_new_payload`).
 
-A report came in that reth, nethermind and geth were "underperforming" on the [7870 deep-dive dashboard](https://grafana.observability.ethpandaops.io/d/eip7870-node-deep-dive/eip-7870-node-deep-dive) — but ethrex wasn't. Three candidate explanations, in rough order of prior probability:
+A report came in that reth, nethermind and geth were "underperforming" on the [7870 deep-dive dashboard](https://grafana.observability.ethpandaops.io/d/eip7870-node-deep-dive/eip-7870-node-deep-dive), but ethrex wasn't. Three candidate explanations, in rough order of prior probability:
 
-1. **Hardware** — noisy neighbors, disk trouble, one bad datacenter
-2. **Broken metrics** — tysm not actually measuring execution time
-3. **Workload** — the blocks themselves changed in some way that hurts clients unevenly
+1. **Hardware**: noisy neighbors, disk trouble, one bad datacenter
+2. **Broken metrics**: tysm not actually measuring execution time
+3. **Workload**: the blocks themselves changed in some way that hurts clients unevenly
 
 **Data range**: 2026-07-08 00:00 to 2026-07-10 00:00 UTC, mainnet, blocks 25,493,987-25,494,583 for the per-block analysis.
 
@@ -339,7 +361,7 @@ A report came in that reth, nethermind and geth were "underperforming" on the [7
 
 ### When It Happened
 
-The anomaly is a two-hour window on 2026-07-09 from roughly 08:45 to 10:45 UTC. Four clients — geth, nethermind, reth, besu — roughly doubled-to-tripled their median newPayload duration. Ethrex did not move. Erigon barely moved.
+The anomaly is a two-hour window on 2026-07-09 from roughly 08:45 to 10:45 UTC. Four clients (geth, nethermind, reth, besu) roughly doubled-to-tripled their median newPayload duration. Ethrex did not move. Erigon barely moved.
 
 <SqlSource source="xatu" query="xen_np_hourly" />
 
@@ -347,11 +369,15 @@ The anomaly is a two-hour window on 2026-07-09 from roughly 08:45 to 10:45 UTC. 
 
 ### Ruling Out Hardware
 
-The three clusters are independent machines in independent datacenters. If this were hardware, the spike would live in one cluster. It doesn't — the same client spikes in all three at the same minute and recovers at the same minute.
+The three clusters are independent machines in independent datacenters. If this were hardware, the spike would live in one cluster. It doesn't: the same client spikes in all three at the same minute and recovers at the same minute.
 
 <ECharts config={clusterConfig} height="400px" />
 
-The berlin trace ends on 2026-07-10 because those nodes were removed for unrelated reasons (they also ran ~2x slower after a fresh resync on the evening of Jul 9 — cold caches, not this event).
+Hardware telemetry from the hosts says the same thing. Each utility client runs on its own dedicated host, and none of them broke a sweat: CPU temperatures sat at 55-62°C through the incident window, marginally *cooler* than the daily average, and NVMe temperatures stayed between 28°C and 70°C across both days. No thermal throttling, no overheating drive.
+
+<SqlSource source="static" query="xen_host_temps" />
+
+<ECharts config={tempConfig} height="420px" />
 
 ### Ruling Out the Metrics
 
@@ -367,50 +393,40 @@ tysm measures from the CL side of the Engine API. The snooper measures from the 
     <Column id="el_spike_ms" title="EL-side spike (ms)" />
 </DataTable>
 
-Both capture points agree to within a few milliseconds: ethrex 32ms in both periods on both sides, everyone else elevated during the spike. The status mix was also clean — no burst of `SYNCING` or `ERROR` responses hiding slow calls from the VALID-only median.
-
-### The Workload That Wasn't There
-
-The obvious workload suspects come up empty. Average gas per block sat at ~30 Mgas the entire time. Transaction counts and blob counts were normal. Mempool volume showed no burst matching the slow windows.
-
-<ECharts config={zoomConfig} height="420px" />
-
-<SqlSource source="xatu" query="xen_workload_5min" />
-
-<ECharts config={workloadConfig} height="300px" />
-
-Same gas, same transaction counts — but bursts of 10-25 minutes where four clients pay a large fixed overhead on every block. That on/off shape is the signature of *something in specific blocks*, not background load.
+Both capture points agree to within a few milliseconds: ethrex 32ms in both periods on both sides, everyone else elevated during the spike. The status mix was also clean: no burst of `SYNCING` or `ERROR` responses hiding slow calls from the VALID-only median.
 
 ### Splitting Blocks by Content
 
-The spike-window blocks divide cleanly into two populations: blocks containing transactions to three XEN batch-mint contracts, and blocks without them. The contracts are [CoinTool: XEN Batch Minter](https://etherscan.io/address/0x0de8bf93da2f7eecb3d9169422413a9bef4ef628) (`0x0de8bf...`), [MCT XENFT](https://etherscan.io/address/0x0000000000771a79d0fc7f3b7fe270eb4498f20b) (`0x000000...`) and [MCT-XEN Batch Minter](https://etherscan.io/address/0x2f848984984d6c3c036174ce627703edaf780479) (`0x2f8489...`) — 6.8 to 15.4 Mgas per transaction, from about five sender addresses.
+The spike-window blocks divide cleanly into two populations: blocks containing transactions to three XEN batch-mint contracts, and blocks without them. The contracts are [CoinTool: XEN Batch Minter](https://etherscan.io/address/0x0de8bf93da2f7eecb3d9169422413a9bef4ef628) (`0x0de8bf...`), [MCT XENFT](https://etherscan.io/address/0x0000000000771a79d0fc7f3b7fe270eb4498f20b) (`0x000000...`) and [MCT-XEN Batch Minter](https://etherscan.io/address/0x2f848984984d6c3c036174ce627703edaf780479) (`0x2f8489...`), at 6.8 to 15.4 Mgas per transaction, from about five sender addresses.
 
 <SqlSource source="xatu" query="xen_block_durations" />
 <SqlSource source="xatu" query="xen_actor_blocks" />
 
 <ECharts config={actorSplitConfig} height="420px" />
 
-During the *same minutes*, clean blocks executed at normal speed on every client. Only blocks carrying XEN mint transactions were slow — and only for four of the six clients.
+During the *same minutes*, clean blocks executed at normal speed on every client. Only blocks carrying XEN mint transactions were slow, and only for four of the six clients.
 
-The per-block scatter makes the mechanism visible. For geth, XEN blocks sit far above the gas trend line — a ~13 Mgas block with one 6.8 Mgas mint tx costs as much as a full 60 Mgas block. For ethrex, XEN blocks sit exactly on the trend:
+The per-block scatter makes the mechanism visible. Pick a client to compare against ethrex; nethermind and reth are the interesting cases, since on clean blocks they run neck-and-neck with ethrex. For every client except ethrex, XEN blocks sit far above the gas trend line, and a small block with one mint tx costs as much as a full 60 Mgas block. For ethrex, XEN blocks sit exactly on the trend:
+
+<div style="margin: 0.5rem 0;">
+    <label for="compare-el" style="font-size: 0.85rem; margin-right: 0.5rem;">Compare against ethrex:</label>
+    <select id="compare-el" bind:value={compareEl} style="font-size: 0.85rem; padding: 0.2rem 0.4rem; border: 1px solid #d1d5db; border-radius: 4px;">
+        <option value="Nethermind">nethermind</option>
+        <option value="Reth">reth</option>
+        <option value="go-ethereum">geth</option>
+        <option value="Besu">besu</option>
+        <option value="erigon">erigon</option>
+    </select>
+</div>
 
 <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-<ECharts config={gethScatterConfig} height="360px" />
+<ECharts config={compareScatterConfig} height="360px" />
 <ECharts config={ethrexScatterConfig} height="360px" />
 </div>
 
-The starkest view: small blocks (under 20 Mgas) that were nonetheless slow for nethermind. Nearly all contain exactly one XEN mint transaction. That single transaction adds 60-100ms for geth/nethermind/reth and ~5ms for ethrex:
+All six clients on the same XEN-carrying blocks, one color per client. The vertical spread at each gas level is the client divergence; ethrex hugs the bottom:
 
-<DataTable data={small_slow} rows=20>
-    <Column id="block_number" title="Block" fmt="id" />
-    <Column id="mgas" title="Block Mgas" />
-    <Column id="actor_txs" title="XEN txs" />
-    <Column id="actor_mgas" title="XEN Mgas" />
-    <Column id="geth_ms" title="geth (ms)" />
-    <Column id="nethermind_ms" title="nethermind (ms)" />
-    <Column id="reth_ms" title="reth (ms)" />
-    <Column id="ethrex_ms" title="ethrex (ms)" />
-</DataTable>
+<ECharts config={allXenScatterConfig} height="560px" />
 
 ### What a XEN Mint Actually Does
 
@@ -420,7 +436,7 @@ Execution traces of the 30 largest CoinTool mint transactions show where the gas
 
 <ECharts config={opcodeConfig} height="440px" />
 
-This is a state-stress workload: gas pays linearly for storage touches, but the real cost — cold trie reads, dirty-node accumulation, state-root recomputation — scales with how scattered those touches are. Thirty Mgas of XEN mints is far more expensive to merkleize than thirty Mgas of swaps, and clients whose state layout amortizes that work (flat state layouts, different trie-commit strategies) barely notice. Ethrex processed XEN blocks at its normal ~1.05 ms/Mgas; erigon's penalty was also small. The others paid heavily:
+This is a state-stress workload: gas pays linearly for storage touches, but the real cost (cold trie reads, dirty-node accumulation, state-root recomputation) scales with how scattered those touches are. Thirty Mgas of XEN mints is far more expensive to merkleize than thirty Mgas of swaps, and clients whose state layout amortizes that work (flat state layouts, different trie-commit strategies) barely notice. Ethrex processed XEN blocks at its normal ~1.05 ms/Mgas; erigon's penalty was also small. The others paid heavily:
 
 <SqlSource source="xatu" query="xen_throughput" />
 
@@ -433,11 +449,18 @@ This is a state-stress workload: gas pays linearly for storage touches, but the 
     <Column id="throughput_drop_pct" title="Throughput drop (%)" />
 </DataTable>
 
-One deferral check for ethrex: if it were postponing the trie work (returning VALID fast and paying later), the *next* block after a XEN block would be slow. It isn't — blocks following XEN blocks run at the same 26ms median as any other clean block.
+One deferral check for ethrex: if it were postponing the trie work (returning VALID fast and paying later), the *next* block after a XEN block would be slow. Splitting every spike-window block by what preceded it shows no such cost; clean blocks run at the same median whether they follow a XEN block or not:
+
+<DataTable data={defer_check}>
+    <Column id="this_block" title="Block" />
+    <Column id="coming" title="Preceded by" />
+    <Column id="blocks" title="Blocks" />
+    <Column id="ethrex_median_ms" title="ethrex median (ms)" />
+</DataTable>
 
 ### Why Bursts, and Why Now
 
-XEN minting is profitable only when gas is cheap. Base fees sat at 0.07-0.14 gwei through the incident window — prime minting conditions — and the wave stopped as fees climbed past ~0.15 gwei after midday. The campaign itself is not new: these three contracts have burned gas continuously for weeks, peaking near 60 Ggas/day in late June. Any chart of client execution performance over that period will carry the same fingerprint.
+XEN minting is profitable only when gas is cheap. Base fees sat at 0.07-0.14 gwei through the incident window, prime minting conditions, and the wave stopped as fees climbed past ~0.15 gwei after midday. The campaign itself is not new: these three contracts have burned gas continuously for weeks, peaking near 60 Ggas/day in late June. Any chart of client execution performance over that period will carry the same fingerprint.
 
 <SqlSource source="xatu" query="xen_campaign_history" />
 
@@ -449,10 +472,10 @@ XEN minting is profitable only when gas is cheap. Base fees sat at 0.07-0.14 gwe
 
 ## Takeaways
 
-- The 2026-07-09 divergence was **real client behavior under a XEN batch-mint spam wave** (08:45-10:45 UTC) — not hardware (identical spike in three independent datacenters) and not metrics (CL-side and EL-side measurements agree exactly).
-- Total gas explains nothing here: blocks averaged ~30 Mgas throughout. **Block content is what changed** — each mint tx does ~1,900 SSTOREs and ~700 cold SLOADs via proxy fan-out, a worst-case state-access pattern per unit of gas.
+- The 2026-07-09 divergence was **real client behavior under a XEN batch-mint spam wave** (08:45-10:45 UTC): not hardware (the same spike in three clusters on different hardware in different datacenters) and not metrics (CL-side and EL-side measurements agree exactly).
+- Total gas explains nothing here: blocks averaged ~30 Mgas throughout. **Block content is what changed**: each mint tx does ~1,900 SSTOREs and ~700 cold SLOADs via proxy fan-out, a worst-case state-access pattern per unit of gas.
 - A single 6.8 Mgas mint transaction added **60-100ms** to geth, nethermind and reth, and **~5ms** to ethrex. Gas-normalized throughput dropped 23-38% for geth/nethermind/reth/besu while ethrex was unchanged.
-- **ethrex and erigon are architecturally resilient** to this workload; the result is worth flagging to client teams on both sides of the gap — it is exactly the divergence that matters for gas-limit-increase discussions, since gas is supposed to price this work.
+- **ethrex and erigon are architecturally resilient** to this workload; the result is worth flagging to client teams on both sides of the gap; it is exactly the divergence that matters for gas-limit-increase discussions, since gas is supposed to price this work.
 - The XEN campaign is ongoing and fires whenever base fee dips below ~0.15 gwei. Expect the same fingerprint in past and future performance charts; per-block content splits (this page's method) separate it from genuine client regressions.
 
 </Section>
