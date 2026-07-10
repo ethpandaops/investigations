@@ -45,6 +45,17 @@ tags:
         { client: 'teku',       nodes: 15, first: '2026-06-25', versions: 'v26.6.0+56-gac1c8c618f' }
     ];
 
+    // head_v2 support, probed directly against one node per client on 2026-07-10
+    // (curl /eth/v1/events?topics=head_v2). Xatu does not capture this event yet.
+    const headV2 = [
+        { client: 'grandine',   ok: false, detail: '400: invalid query string: topics: Matching variant not found' },
+        { client: 'lighthouse', ok: false, detail: '400: BAD_REQUEST: unable to parse query' },
+        { client: 'lodestar',   ok: false, detail: '400: Invalid topic: head_v2' },
+        { client: 'nimbus',     ok: false, detail: '400: Invalid topics value' },
+        { client: 'prysm',      ok: true,  detail: 'emits head_v2 with payload_status' },
+        { client: 'teku',       ok: true,  detail: 'emits head_v2 with payload_status' }
+    ];
+
     function fmtCount(n) {
         if (n >= 1e6) return (n / 1e6).toFixed(1) + 'M';
         if (n >= 1e3) return (n / 1e3).toFixed(0) + 'k';
@@ -141,6 +152,31 @@ Three gaps show up, and each one holds across every node of the affected client 
 
 These are API gaps, not networking gaps. The corresponding gossipsub topics show messages arriving from peers of every client, so nimbus does forward `execution_payload_bid` messages on gossip, it just doesn't expose the SSE event. Where a client does emit an event, its volume is in line with its node count. There are no partial or intermittent emitters.
 
+### head_v2
+
+Glamsterdam also added `head_v2` to the event stream spec. It replaces the now-deprecated `head` event and adds `payload_status`. Xatu does not capture it yet, so it is not in the matrix above. Instead we probed one node per client directly on 2026-07-10 with `curl /eth/v1/events?topics=head_v2`:
+
+<table class="matrix-table">
+    <thead>
+        <tr>
+            <th style="text-align:left">client</th>
+            <th>head_v2</th>
+            <th style="text-align:left">response</th>
+        </tr>
+    </thead>
+    <tbody>
+        {#each headV2 as c}
+        <tr>
+            <td style="text-align:left"><b>{c.client}</b></td>
+            <td style="text-align:center">{c.ok ? '✅' : '❌'}</td>
+            <td style="text-align:left"><code>{c.detail}</code></td>
+        </tr>
+        {/each}
+    </tbody>
+</table>
+
+All six clients still emit the deprecated v1 `head` event.
+
 </Section>
 
 <Section type="takeaways">
@@ -151,6 +187,7 @@ These are API gaps, not networking gaps. The corresponding gossipsub topics show
 - **grandine** is missing `payload_attestation` and `proposer_preferences`.
 - **lodestar** is missing `payload_attestation`.
 - **nimbus** is missing `execution_payload_bid`, `payload_attestation` and `proposer_preferences`.
+- `head_v2` is only emitted by **prysm** and **teku**; the other four clients reject the topic. Xatu doesn't capture it yet either.
 
 </Section>
 
