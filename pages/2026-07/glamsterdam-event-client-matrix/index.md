@@ -45,16 +45,27 @@ tags:
         { client: 'teku',       nodes: 15, first: '2026-06-25', versions: 'v26.6.0+56-gac1c8c618f' }
     ];
 
-    // head_v2 support, probed directly against one node per client on 2026-07-10
-    // (curl /eth/v1/events?topics=head_v2). Xatu does not capture this event yet.
-    const headV2 = [
-        { client: 'grandine',   ok: false, detail: '400: invalid query string: topics: Matching variant not found' },
-        { client: 'lighthouse', ok: false, detail: '400: BAD_REQUEST: unable to parse query' },
-        { client: 'lodestar',   ok: false, detail: '400: Invalid topic: head_v2' },
-        { client: 'nimbus',     ok: false, detail: '400: Invalid topics value' },
-        { client: 'prysm',      ok: true,  detail: 'emits head_v2 with payload_status' },
-        { client: 'teku',       ok: true,  detail: 'emits head_v2 with payload_status' }
+    // head_v2 is not captured by Xatu yet; values are from the direct probes below.
+    const headV2Row = { event: 'head_v2', cells: [false, false, false, false, true, true] };
+
+    // Direct probes of every missing client/event pair, one node per client,
+    // 2026-07-10: curl /eth/v1/events?topics=<topic> held open over SSH (20s, missing-but-accepted topics re-checked for 120s).
+    // 'rejected' = HTTP 400, 'silent' = HTTP 200 but no events, 'emits' = events seen.
+    const probes = [
+        { client: 'grandine',   topic: 'head_v2',                     result: 'rejected', detail: '400: invalid query string: topics: Matching variant not found' },
+        { client: 'grandine',   topic: 'payload_attestation_message', result: 'rejected', detail: '400: invalid query string: topics: Matching variant not found' },
+        { client: 'grandine',   topic: 'proposer_preferences',        result: 'rejected', detail: '400: invalid query string: topics: Matching variant not found' },
+        { client: 'lighthouse', topic: 'head_v2',                     result: 'rejected', detail: '400: BAD_REQUEST: unable to parse query' },
+        { client: 'lodestar',   topic: 'head_v2',                     result: 'rejected', detail: '400: Invalid topic: head_v2' },
+        { client: 'lodestar',   topic: 'payload_attestation_message', result: 'rejected', detail: '400: Invalid topic: payload_attestation_message' },
+        { client: 'nimbus',     topic: 'head_v2',                     result: 'rejected', detail: '400: Invalid topics value' },
+        { client: 'nimbus',     topic: 'execution_payload_bid',       result: 'silent',   detail: '200, no events in 120s' },
+        { client: 'nimbus',     topic: 'payload_attestation_message', result: 'silent',   detail: '200, no events in 120s' },
+        { client: 'nimbus',     topic: 'proposer_preferences',        result: 'silent',   detail: '200, no events in 120s' },
+        { client: 'prysm',      topic: 'head_v2',                     result: 'emits',    detail: 'events with payload_status seen immediately' },
+        { client: 'teku',       topic: 'head_v2',                     result: 'emits',    detail: 'events with payload_status seen immediately' }
     ];
+    const probeIcon = { emits: '✅', silent: '⚠️', rejected: '❌' };
 
     function fmtCount(n) {
         if (n >= 1e6) return (n / 1e6).toFixed(1) + 'M';
@@ -139,6 +150,14 @@ A tick means the client emitted at least one event of this type over the window 
             {/each}
         </tr>
         {/each}
+        <tr class="not-in-xatu">
+            <td style="text-align:left"><code>{headV2Row.event}</code> <span class="badge">not in Xatu yet</span></td>
+            {#each headV2Row.cells as ok}
+            <td style="text-align:center">
+                {#if ok}✅ <span class="cnt">probe</span>{:else}❌{/if}
+            </td>
+            {/each}
+        </tr>
     </tbody>
 </table>
 
@@ -152,28 +171,37 @@ Three gaps show up, and each one holds across every node of the affected client 
 
 These are API gaps, not networking gaps. The corresponding gossipsub topics show messages arriving from peers of every client, so nimbus does forward `execution_payload_bid` messages on gossip, it just doesn't expose the SSE event. Where a client does emit an event, its volume is in line with its node count. There are no partial or intermittent emitters.
 
-### head_v2
+The `head_v2` row is different from the rest: Glamsterdam added it to the event stream spec (it replaces the now-deprecated `head` event and adds `payload_status`) but Xatu does not capture it yet, so its row comes from the direct probes below rather than from Xatu data.
 
-Glamsterdam also added `head_v2` to the event stream spec. It replaces the now-deprecated `head` event and adds `payload_status`. Xatu does not capture it yet, so it is not in the matrix above. Instead we probed one node per client directly on 2026-07-10 with `curl /eth/v1/events?topics=head_v2`:
+### Probing the gaps
+
+To pin down what each missing cell actually means, we probed every missing client and event pair directly on 2026-07-10: one node per client, `curl /eth/v1/events?topics=<topic>` held open over SSH for 20 seconds, and 120 seconds (10 slots) wherever the stream stayed silent. Note the SSE topic for payload attestations is `payload_attestation_message` per the spec; Xatu just stores it as `payload_attestation`.
 
 <table class="matrix-table">
     <thead>
         <tr>
             <th style="text-align:left">client</th>
-            <th>head_v2</th>
+            <th style="text-align:left">topic</th>
+            <th>result</th>
             <th style="text-align:left">response</th>
         </tr>
     </thead>
     <tbody>
-        {#each headV2 as c}
+        {#each probes as p}
         <tr>
-            <td style="text-align:left"><b>{c.client}</b></td>
-            <td style="text-align:center">{c.ok ? '✅' : '❌'}</td>
-            <td style="text-align:left"><code>{c.detail}</code></td>
+            <td style="text-align:left"><b>{p.client}</b></td>
+            <td style="text-align:left"><code>{p.topic}</code></td>
+            <td style="text-align:center">{probeIcon[p.result]} <span class="cnt">{p.result}</span></td>
+            <td style="text-align:left"><code>{p.detail}</code></td>
         </tr>
         {/each}
     </tbody>
 </table>
+
+The probes split the gaps into two kinds:
+
+- **grandine and lodestar reject** their missing topics with a 400: the topics don't exist in their event stream API at all.
+- **nimbus accepts** subscriptions to all three of its missing topics but never sends an event, even over 10 slots. The API routing exists; the emission doesn't. Its `head_v2` rejection is the exception.
 
 All six clients still emit the deprecated v1 `head` event.
 
@@ -188,6 +216,7 @@ All six clients still emit the deprecated v1 `head` event.
 - **lodestar** is missing `payload_attestation`.
 - **nimbus** is missing `execution_payload_bid`, `payload_attestation` and `proposer_preferences`.
 - `head_v2` is only emitted by **prysm** and **teku**; the other four clients reject the topic. Xatu doesn't capture it yet either.
+- Probing the gaps directly: grandine and lodestar reject their missing topics with a 400, while nimbus accepts the subscription but never emits.
 
 </Section>
 
@@ -206,5 +235,22 @@ All six clients still emit the deprecated v1 `head` event.
         display: block;
         font-size: 0.7rem;
         opacity: 0.6;
+    }
+    .not-in-xatu {
+        background: rgba(234, 179, 8, 0.08);
+    }
+    .badge {
+        display: inline-block;
+        margin-left: 0.4rem;
+        padding: 0.05rem 0.4rem;
+        border: 1px solid rgba(234, 179, 8, 0.6);
+        border-radius: 999px;
+        font-size: 0.65rem;
+        color: #a16207;
+        white-space: nowrap;
+        vertical-align: middle;
+    }
+    :global([data-theme="dark"]) .badge {
+        color: #eab308;
     }
 </style>
