@@ -226,23 +226,6 @@ tags:
         };
     })();
 
-    // Chart 8: campaign history
-    $: campaignConfig = (() => {
-        if (!campaign_history || campaign_history.length === 0 || campaign_history[0].approx_date == null) return {};
-        const days = campaign_history.map(d => new Date(d.approx_date).toISOString().slice(0, 10));
-        return {
-            title: { text: 'This Was Not a One-Off', subtext: 'Daily gas consumed by the three XEN batch-mint contracts (dates approximated from block numbers)', left: 'center', textStyle: { fontSize: 15, fontWeight: 600 }, subtextStyle: { fontSize: 11, color: '#888' } },
-            tooltip: { trigger: 'axis', valueFormatter: v => Number(v).toFixed(1) + ' Ggas' },
-            grid: { left: 48, right: 22, bottom: 60, top: 70, containLabel: true },
-            xAxis: { type: 'category', data: days, axisLabel: { rotate: 45, fontSize: 9 }, name: 'Date (approx, UTC)', nameLocation: 'center', nameGap: 55 },
-            yAxis: { type: 'value', name: 'Gas per day (Ggas)', nameLocation: 'center', nameGap: 40, nameRotate: 90 },
-            series: [{
-                name: 'XEN mint gas', type: 'bar',
-                data: campaign_history.map(d => Number(d.ggas)),
-                itemStyle: { color: '#2563eb', borderRadius: [4, 4, 0, 0] }
-            }]
-        };
-    })();
 </script>
 
 <PageMeta
@@ -349,10 +332,6 @@ select * from xatu.xen_june_split
 
 ```sql opcode_profile
 select * from xatu.xen_opcode_profile
-```
-
-```sql campaign_history
-select * from xatu.xen_campaign_history order by approx_date
 ```
 
 <Section type="question">
@@ -484,13 +463,7 @@ One deferral check for ethrex: if it were postponing the trie work (returning VA
 
 ### The Fingerprint Replicates
 
-The campaign is not new. These three contracts have burned gas continuously for weeks, peaking above 70 Ggas on June 28:
-
-<SqlSource source="xatu" query="xen_campaign_history" />
-
-<ECharts config={campaignConfig} height="360px" />
-
-If the July 9 result is real client behavior rather than a quirk of that morning, the same split should appear at the campaign peak. It does. During the heaviest two hours of June 28, ethrex again paid almost nothing for XEN blocks (30ms clean, 43ms with XEN) while geth went 58ms to 151ms and reth 25ms to 61ms:
+The mint campaign has run for weeks, and it peaked on June 28. If the July 9 result is real client behavior rather than a quirk of that morning, the same split should appear there. It does. During the heaviest two hours of June 28, ethrex again paid almost nothing for XEN blocks (30ms clean, 43ms with XEN) while geth went 58ms to 151ms and reth 25ms to 61ms:
 
 <SqlSource source="xatu" query="xen_june_split" />
 
