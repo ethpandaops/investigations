@@ -15,6 +15,7 @@ tags:
 <script>
     import PageMeta from '$lib/PageMeta.svelte';
     import Section from '$lib/Section.svelte';
+    import SqlSource from '$lib/SqlSource.svelte';
 
     const clients = ['grandine', 'lighthouse', 'lodestar', 'nimbus', 'prysm', 'teku'];
 
@@ -97,6 +98,8 @@ With that much redundancy, a zero cell means the client never emitted the event,
     </tbody>
 </table>
 
+<SqlSource source="xatu" query="glam_client_coverage" />
+
 </Section>
 
 <Section type="investigation">
@@ -105,7 +108,7 @@ With that much redundancy, a zero cell means the client never emitted the event,
 
 ### Event support matrix
 
-A tick means the client emitted at least one event of this type over the window (2026-06-25 to 2026-07-09 UTC). Counts are total events across all of that client's sentries. Data comes from `glamsterdam-devnet-6.beacon_api_eth_v1_events_*`, queried by `sources/xatu/glam_sse_client_matrix.sql`.
+A tick means the client emitted at least one event of this type over the window (2026-06-25 to 2026-07-09 UTC). Counts are total events across all of that client's sentries, from `glamsterdam-devnet-6.beacon_api_eth_v1_events_*`.
 
 <table class="matrix-table">
     <thead>
@@ -128,6 +131,8 @@ A tick means the client emitted at least one event of this type over the window 
     </tbody>
 </table>
 
+<SqlSource source="xatu" query="glam_sse_client_matrix" />
+
 Three gaps show up, and each one holds across every node of the affected client for the whole window:
 
 - **nimbus** never emits `execution_payload_bid`.
@@ -146,7 +151,6 @@ These are API gaps, not networking gaps. The corresponding gossipsub topics show
 - **grandine** is missing `payload_attestation` and `proposer_preferences`.
 - **lodestar** is missing `payload_attestation`.
 - **nimbus** is missing `execution_payload_bid`, `payload_attestation` and `proposer_preferences`.
-- Every gap is all-or-nothing per client, which looks like unimplemented SSE topics rather than bugs. Worth confirming with each team before devnet-7.
 
 </Section>
 
