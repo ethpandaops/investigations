@@ -345,7 +345,7 @@ On 2026-07-09, geth, nethermind, reth and besu all slowed down 2-3x on the EIP-7
 
 The [EIP-7870](https://eips.ethereum.org/EIPS/eip-7870) fleet runs every major execution client in three independently operated clusters: `utility`, `sigma` and `berlin`. The clusters sit in different datacenters on different hardware, which makes cross-cluster comparison a clean hardware control. Each node pairs an EL with [tysm](https://github.com/ethpandaops/tysm), which times every `engine_newPayload` call and ships the measurement to Xatu (`consensus_engine_api_new_payload`). An [engine snooper](https://github.com/ethpandaops/xatu) sitting between CL and EL independently records the same calls from the EL side (`execution_engine_new_payload`).
 
-A report came in that reth, nethermind and geth were "underperforming" on the [7870 deep-dive dashboard](https://grafana.observability.ethpandaops.io/d/eip7870-node-deep-dive/eip-7870-node-deep-dive), but ethrex wasn't. Three candidate explanations, in rough order of prior probability:
+A report came in that reth, nethermind and geth were underperforming on the [7870 deep-dive dashboard](https://grafana.observability.ethpandaops.io/d/eip7870-node-deep-dive/eip-7870-node-deep-dive), but ethrex wasn't. Three candidate explanations, in rough order of prior probability:
 
 1. **Hardware**: noisy neighbors, disk trouble, one bad datacenter
 2. **Broken metrics**: tysm not actually measuring execution time
