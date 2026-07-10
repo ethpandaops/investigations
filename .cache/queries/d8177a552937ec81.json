@@ -1,0 +1,1 @@
+{"columns":["classification","entity_count","total_blocks","avg_arrival_seconds"],"data":{"classification":["Conservative","Neutral","Suspect"],"entity_count":["297","138","18"],"total_blocks":["23511","31626","2313"],"avg_arrival_seconds":[1.191,1.849,3.555]},"rowCount":3}

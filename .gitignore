@@ -7,4 +7,3 @@ static/data/
 *.options.yaml
 .vscode/
 .env
-.cache/queries/

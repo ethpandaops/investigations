@@ -1,0 +1,1 @@
+{"columns":["client_type","meta_client_name","avg_cores","p50_cores","p95_cores","peak_cores"],"data":{"client_type":["geth"],"meta_client_name":["utility-mainnet-lighthouse-geth-001"],"avg_cores":[0.96],"p50_cores":[0.21],"p95_cores":[2.65],"peak_cores":[23.49]},"rowCount":1}

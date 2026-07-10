@@ -1,0 +1,1 @@
+{"columns":["calling_contract","blake2f_calls","total_gas","avg_gas","min_gas","max_gas"],"data":{"calling_contract":["0x40ec84ca82fbf1b4d6a8edb02bffcf3eb0400aae"],"blake2f_calls":["190"],"total_gas":["2280"],"avg_gas":[12],"min_gas":["12"],"max_gas":["12"]},"rowCount":1}

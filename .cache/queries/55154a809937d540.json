@@ -1,0 +1,1 @@
+{"columns":["entity_group","correct_head","total","head_accuracy_pct"],"data":{"entity_group":["Solo Stakers","Rocketpool","Lido CSM","Other"],"correct_head":["123209976","25994787","20919355","1339199293"],"total":["125386536","26830943","21252942","1353981499"],"head_accuracy_pct":[98.26,96.88,98.43,98.91]},"rowCount":4}

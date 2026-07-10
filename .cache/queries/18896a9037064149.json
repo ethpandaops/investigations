@@ -1,0 +1,1 @@
+{"columns":["metric","value_ms"],"data":{"metric":["Network Mean","Network Fastest","High-Peer Node Average","Diff vs Fastest","Network Median","Diff vs Median (negative = faster)"],"value_ms":[2076,1767,1981,213,2018,-37]},"rowCount":6}

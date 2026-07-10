@@ -1,0 +1,1 @@
+{"columns":["consensus_client","median_arrival_seconds","sample_count"],"data":{"consensus_client":["","prysm","teku","lighthouse","nimbus","lodestar","grandine","tysm","caplin"],"median_arrival_seconds":[1.803,1.825,1.8655,1.915,1.923,2.0385,2.0425,2.1485,2.159],"sample_count":["796077","3317293","1263846","1895675","1716433","1218374","227751","18208","57557"]},"rowCount":9}

@@ -1,0 +1,1 @@
+{"columns":["client_type","avg_cores","p50_cores","p95_cores","p99_cores","peak_cores"],"data":{"client_type":["nimbus","lodestar","prysm","lighthouse"],"avg_cores":[0.73,0.9,1.93,5.56],"p50_cores":[0.83,0.32,0.93,4.11],"p95_cores":[1.04,5.04,7.99,15.79],"p99_cores":[1.06,5.55,10.91,17.75],"peak_cores":[11.03,32,32,32]},"rowCount":4}

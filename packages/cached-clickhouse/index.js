@@ -170,12 +170,9 @@ async function saveToCache(cachePath, rows) {
  * @returns {Object[]|null} - The cached rows or null if not found
  */
 function loadFromCache(cachePath) {
-  // Check for empty result marker
-  if (existsSync(cachePath + '.empty')) {
-    return [];
-  }
-
-  // Try JSON cache (simplified parquet alternative)
+  // Prefer a concrete cached result over an empty marker, so a zero-row
+  // re-fetch (e.g. after source data ages out of retention) cannot shadow
+  // committed cache entries.
   const jsonPath = cachePath + '.json';
   if (existsSync(jsonPath)) {
     try {
@@ -196,6 +193,11 @@ function loadFromCache(cachePath) {
       console.error(`[cached-clickhouse] Error reading cache: ${error.message}`);
       return null;
     }
+  }
+
+  // Empty result marker
+  if (existsSync(cachePath + '.empty')) {
+    return [];
   }
 
   return null;

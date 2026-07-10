@@ -1,0 +1,1 @@
+{"columns":["status","observations","pct","avg_blobs_requested","avg_blobs_returned"],"data":{"status":["SUCCESS","EMPTY","ERROR"],"observations":["337970","27119","175"],"pct":[92.53,7.42,0.05],"avg_blobs_requested":[5.9,7.7,9],"avg_blobs_returned":[5.9,0,0]},"rowCount":3}

@@ -1,0 +1,1 @@
+{"columns":["score_bucket","bucket_order","entity_count"],"data":{"score_bucket":["z < -2","-2 ≤ z < -1","-1 ≤ z < 0","0 ≤ z < 1","1 ≤ z < 2","2 ≤ z < 3","z ≥ 3"],"bucket_order":[1,2,3,4,5,6,7],"entity_count":["1","41","255","102","36","16","2"]},"rowCount":7}

@@ -1,0 +1,1 @@
+{"columns":["source","blocks","p50_pre_kb","p50_post_kb","p95_pre_kb","p50_gas_M","p50_t_first_ms","p95_t_first_ms"],"data":{"source":["Local","MEV-Boost"],"blocks":["2489","47829"],"p50_pre_kb":[70,164],"p50_post_kb":[37,74],"p95_pre_kb":[201,305],"p50_gas_M":[11.4,29.5],"p50_t_first_ms":[1312,1481],"p95_t_first_ms":[2926,3051]},"rowCount":2}
