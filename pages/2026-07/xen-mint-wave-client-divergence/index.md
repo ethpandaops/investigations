@@ -135,6 +135,26 @@ tags:
         };
     })();
 
+    // Chart 5b: same split during the June 28 campaign peak
+    $: juneSplitConfig = (() => {
+        if (!june_split || june_split.length === 0 || june_split[0].el == null) return {};
+        const els = CLIENT_ORDER.filter(el => june_split.some(d => d.el === el));
+        const withXen = els.map(el => { const r = june_split.find(d => d.el === el && d.grp === 'with_xen'); return r ? Number(r.med_ms) : null; });
+        const without = els.map(el => { const r = june_split.find(d => d.el === el && d.grp === 'clean'); return r ? Number(r.med_ms) : null; });
+        return {
+            title: { text: 'Same Split, Three Weeks Earlier', subtext: 'Median newPayload duration on 2026-06-28 20:00-22:00 UTC, the campaign peak. erigon excluded (mid-resync).', left: 'center', textStyle: { fontSize: 15, fontWeight: 600 }, subtextStyle: { fontSize: 11, color: '#888' } },
+            tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' }, valueFormatter: v => (v == null ? 'n/a' : Number(v).toFixed(0) + 'ms') },
+            legend: { data: ['Block contains XEN mint tx', 'Clean block'], top: 44 },
+            grid: { left: 48, right: 22, bottom: 50, top: 92, containLabel: true },
+            xAxis: { type: 'category', data: els, axisLabel: { interval: 0 }, name: 'Execution client', nameLocation: 'center', nameGap: 32 },
+            yAxis: { type: 'value', name: 'Median duration (ms)', nameLocation: 'center', nameGap: 42, nameRotate: 90 },
+            series: [
+                { name: 'Block contains XEN mint tx', type: 'bar', data: withXen, itemStyle: { color: C_XEN, borderRadius: [4, 4, 0, 0] }, barGap: '10%', label: { show: true, position: 'top', fontSize: 10, formatter: p => p.value + 'ms' } },
+                { name: 'Clean block', type: 'bar', data: without, itemStyle: { color: C_CLEAN, borderRadius: [4, 4, 0, 0] }, label: { show: true, position: 'top', fontSize: 10, formatter: p => p.value + 'ms' } }
+            ]
+        };
+    })();
+
     // Chart 6: scatter comparison of duration vs block gas, selectable client vs ethrex
     const MS_COLS = {
         'go-ethereum': 'geth_ms',
@@ -323,6 +343,10 @@ group by el
 order by el
 ```
 
+```sql june_split
+select * from xatu.xen_june_split
+```
+
 ```sql opcode_profile
 select * from xatu.xen_opcode_profile
 ```
@@ -458,13 +482,21 @@ One deferral check for ethrex: if it were postponing the trie work (returning VA
     <Column id="ethrex_median_ms" title="ethrex median (ms)" />
 </DataTable>
 
-### Why Bursts, and Why Now
+### The Fingerprint Replicates
 
-XEN minting is profitable only when gas is cheap. Base fees sat at 0.07-0.14 gwei through the incident window, prime minting conditions, and the wave stopped as fees climbed past ~0.15 gwei after midday. The campaign itself is not new: these three contracts have burned gas continuously for weeks, peaking near 60 Ggas/day in late June. Any chart of client execution performance over that period will carry the same fingerprint.
+The campaign is not new. These three contracts have burned gas continuously for weeks, peaking above 70 Ggas on June 28:
 
 <SqlSource source="xatu" query="xen_campaign_history" />
 
 <ECharts config={campaignConfig} height="360px" />
+
+If the July 9 result is real client behavior rather than a quirk of that morning, the same split should appear at the campaign peak. It does. During the heaviest two hours of June 28, ethrex again paid almost nothing for XEN blocks (30ms clean, 43ms with XEN) while geth went 58ms to 151ms and reth 25ms to 61ms:
+
+<SqlSource source="xatu" query="xen_june_split" />
+
+<ECharts config={juneSplitConfig} height="420px" />
+
+One difference is worth flagging to client teams: nethermind's penalty was as mild as ethrex's in June (30ms to 42ms) but grew to nearly 3x by July 9. Both the nethermind build (`1.40.0+166efc69` to `+32e36e05`) and the mint mix (July added 13-15 Mgas MCT transactions) changed between the two windows, so the cause needs a bisect rather than a guess.
 
 </Section>
 
@@ -476,6 +508,6 @@ XEN minting is profitable only when gas is cheap. Base fees sat at 0.07-0.14 gwe
 - Total gas explains nothing here: blocks averaged ~30 Mgas throughout. **Block content is what changed**: each mint tx does ~1,900 SSTOREs and ~700 cold SLOADs via proxy fan-out, a worst-case state-access pattern per unit of gas.
 - A single 6.8 Mgas mint transaction added **60-100ms** to geth, nethermind and reth, and **~5ms** to ethrex. Gas-normalized throughput dropped 23-38% for geth/nethermind/reth/besu while ethrex was unchanged.
 - **ethrex and erigon are architecturally resilient** to this workload; the result is worth flagging to client teams on both sides of the gap; it is exactly the divergence that matters for gas-limit-increase discussions, since gas is supposed to price this work.
-- The XEN campaign is ongoing and fires whenever base fee dips below ~0.15 gwei. Expect the same fingerprint in past and future performance charts; per-block content splits (this page's method) separate it from genuine client regressions.
+- The fingerprint replicates: at the June 28 campaign peak, ethrex showed the same near-zero penalty while geth and reth slowed 2.4-2.6x. Per-block content splits (this page's method) separate workload effects from genuine client regressions; nethermind's penalty growing from 1.4x (June build) to 2.8x (July build) is worth a client-side bisect.
 
 </Section>
